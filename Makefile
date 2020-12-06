@@ -7,23 +7,32 @@ PAGE_DIR    := $$(PREVDIR)/$<
 CONFIG_FILE := $$(PAGE_DIR)/config
 include $$(CONFIG_FILE)
 
-TITLE       ?= $$(notdir $$(PAGE_DIR))
-LAYOUT      ?= default.html
-LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(LAYOUT)
-PAGE_HTML   := $$(shell find $$(PAGE_DIR) -type f -name "*.html")
-HTML        := $$(patsubst $$(PAGE_DIR)/%,part.%,$$(PAGE_HTML))
+title       ?= $$(notdir $$(PAGE_DIR))
+layout      ?= default.html
+keywords    ?=
+description ?=
+
+LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
+PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
+PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
+RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
+ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
 
 index.html: content.html $$(LAYOUT_FILE) $$(CONFIG_FILE)
 	cp $$(LAYOUT_FILE) $$@
-	sed -i 's/{{title}}/$$(TITLE)/g' $$@
+	sed -i 's/{{title}}/$$(title)/g' $$@
+	sed -i 's/{{keywords}}/$$(keywords)/g' $$@
+	sed -i 's/{{description}}/$$(description)/g' $$@
 	sed -i -e '/{{content}}/{r $$<' -e 'd}' $$@
 
-content.html: $$(PAGE_HTML)
+content.html: $$(ALL_HTML)
 	cat $$^ > $$@
+
+%.md.html: $$(PAGE_DIR)/%.md
+	cmark $$< > $$@
 
 $$(CONFIG_FILE):
 	touch $$@
-
 endef
 
 define DEFAULT_TEMPLATE
@@ -36,6 +45,8 @@ define DEFAULT_TEMPLATE
 	<meta name="Revisit-After" content="15 days"/>
 	<meta name="Robots" content="All"/>
 	<meta name="Title" content="{{title}}"/>
+	<meta name="Keywords" content="{{keywords}}"/>
+	<meta name="Description" content="{{description}}"/>
 </head>
 <body>
 	<section>
