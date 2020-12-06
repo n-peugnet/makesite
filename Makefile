@@ -3,17 +3,27 @@ PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
 define SUB_MAKEFILE
-LAYOUT_NAME := default.html
-LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(LAYOUT_NAME)
 PAGE_DIR    := $$(PREVDIR)/$<
+CONFIG_FILE := $$(PAGE_DIR)/config
+include $$(CONFIG_FILE)
+
+TITLE       ?= $$(notdir $$(PAGE_DIR))
+LAYOUT      ?= default.html
+LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(LAYOUT)
 PAGE_HTML   := $$(shell find $$(PAGE_DIR) -type f -name "*.html")
 HTML        := $$(patsubst $$(PAGE_DIR)/%,part.%,$$(PAGE_HTML))
 
-index.html: content.html $$(LAYOUT_FILE)
-	sed -e '/{{content}}/{r $$<' -e 'd}' $$(LAYOUT_FILE) > $$@
+index.html: content.html $$(LAYOUT_FILE) $$(CONFIG_FILE)
+	cp $$(LAYOUT_FILE) $$@
+	sed -i 's/{{title}}/$$(TITLE)/g' $$@
+	sed -i -e '/{{content}}/{r $$<' -e 'd}' $$@
 
 content.html: $$(PAGE_HTML)
 	cat $$^ > $$@
+
+$$(CONFIG_FILE):
+	touch $$@
+
 endef
 
 define DEFAULT_TEMPLATE
