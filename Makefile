@@ -1,6 +1,9 @@
-PAGES_LIST     := $(shell find pages/* -type d)
-PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
-PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
+include config
+
+# default config values
+basepath       := $(subst //,/,/$(basepath)/)
+
+################################# SubMakefile ##################################
 
 define SUB_MAKEFILE
 PAGE        := $*
@@ -12,6 +15,7 @@ include $$(CONFIG_FILE)
 # default config values
 title       ?= $$(notdir $$(PAGE_DIR))
 layout      ?= default.html
+view        ?= $$(PREVDIR)/templates/view/list.html
 date        ?= $$(shell stat -c %Y $$(PAGE_DIR))
 keywords    ?=
 description ?=
@@ -44,7 +48,21 @@ content.html: $$(ALL_HTML)
 	cmark $$< > $$@
 
 subpages.html: $$(SUBMETADATA)
-	if [ -n '$$^' ]; then cat $$^ > $$@; else touch $$@; fi
+	echo '<ul>' > $$@
+	for f in $$^; \
+	do \
+		title=$$$$(cut -f1 $$$$f); \
+		date=$$$$(cut -f2 $$$$f); \
+		description=$$$$(cut -f3 $$$$f); \
+		path=$$$$(cut -f4 $$$$f); \
+		cat $$(view) \
+		| sed "s/{{title}}/$$$$title/g" \
+		| sed "s/{{date}}/$$$$date/g" \
+		| sed "s/{{description}}/$$$$description/g" \
+		| sed "s/{{path}}/$$$$path/g" \
+		>> $$@; \
+	done
+	echo '</ul>' >> $$@
 
 %/metadatas: .FORCE
 	@$$(MAKE) -C $$(PREVDIR) public/$$*/index.html
@@ -63,36 +81,54 @@ $$(CONFIG_FILE):
 	touch $$@
 
 .FORCE:
-
 endef
+
+############################### Default template ###############################
 
 define DEFAULT_TEMPLATE
 <!DOCTYPE html>
 <html>
-<head>
-	<title>{{title}}</title>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width" />
-	<meta name="Revisit-After" content="15 days"/>
-	<meta name="Robots" content="All"/>
-	<meta name="Title" content="{{title}}"/>
-	<meta name="Keywords" content="{{keywords}}"/>
-	<meta name="Description" content="{{description}}"/>
-</head>
-<body>
-	<section>
-		<h1>{{title}}</h1>
-		{{content}}
-	</section>
-	<section>
-		{{subpages}}
-	</section>
-</body>
+	<head>
+		<title>{{title}}</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="Revisit-After" content="15 days"/>
+		<meta name="Robots" content="All"/>
+		<meta name="Title" content="{{title}}"/>
+		<meta name="Keywords" content="{{keywords}}"/>
+		<meta name="Description" content="{{description}}"/>
+	</head>
+	<body>
+		<section>
+			<h1>{{title}}</h1>
+			{{content}}
+		</section>
+		<section>
+			{{subpages}}
+		</section>
+	</body>
 </html>
 endef
 
+############################### Default listview ###############################
+
+define DEFAULT_LISTVIEW
+<li>
+	<p>
+		<a href="$(basepath){{path}}">{{title}}</a>
+	</p>
+	<p>{{description}}</p>
+</li>
+endef
+
+################################ Main Makefile #################################
+
+PAGES_LIST     := $(shell find pages/* -type d)
+PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
+PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
+
 .PHONY: site
-site: templates/layout/default.html public/index.html
+site: templates/layout/default.html templates/view/list.html public/index.html
 
 public/index.html: build/index.html public
 	cp $< $@
@@ -129,6 +165,15 @@ templates/layout/default.html: Makefile
 	mkdir -p $(@D)
 	echo "$$CONTENT" > $@
 
+
+templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
+templates/view/list.html: Makefile
+	mkdir -p $(@D)
+	echo "$$CONTENT" > $@
+
+config:
+	touch $@
+
 $(PUBLIC_PAGES):
 	mkdir -p $@
 
@@ -139,6 +184,7 @@ clean: siteclean buildclean
 buildclean:
 	rm -rf build
 	rm -rf templates/layout/default.html
+	rm -rf templates/view/list.html
 
 .PHONY:
 siteclean:
