@@ -228,7 +228,7 @@ PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
 JS         := $(wildcard assets/*.js)
 CSS        := $(wildcard assets/*.css)
-ICO        := $(wildcard assets/favicon.*)
+ICO        := $(firstword $(wildcard assets/favicon.*))
 ICO_EXT    := $(subst .,,$(suffix $(ICO)))
 PUBLIC_JS  := $(JS:%=public/%)
 PUBLIC_CSS := $(CSS:%=public/%)
@@ -249,29 +249,29 @@ site: templates/layout/default.html templates/view/list.html public/index.html \
 public/assets/%: assets/% public/assets
 	cp $< $@
 
-public/index.html: build/index.html public
+public/index.html: build/pages/index.html public
 	cp $< $@
 
-.PRECIOUS: build/index.html
-build/index.html: build/Makefile .FORCE
+.PRECIOUS: build/pages/index.html
+build/pages/index.html: build/pages/Makefile .FORCE
 	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
 
-.PRECIOUS: build/Makefile
-build/Makefile: export CONTENT=$(SUB_MAKEFILE)
-build/Makefile: pages Makefile
+.PRECIOUS: build/pages/Makefile
+build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
+build/pages/Makefile: pages Makefile
 	mkdir -p $(@D)
 	echo "$$CONTENT" > $@
 
-public/%/index.html: build/%/index.html public/%
+public/%/index.html: build/pages/%/index.html public/%
 	cp $< $@
 
-.PRECIOUS: build/%/index.html
-build/%/index.html: build/%/Makefile .FORCE
+.PRECIOUS: build/pages/%/index.html
+build/pages/%/index.html: build/pages/%/Makefile .FORCE
 	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
 
-.PRECIOUS: build/%/Makefile
-build/%/Makefile: export CONTENT=$(SUB_MAKEFILE)
-build/%/Makefile: pages/% Makefile
+.PRECIOUS: build/pages/%/Makefile
+build/pages/%/Makefile: export CONTENT=$(SUB_MAKEFILE)
+build/pages/%/Makefile: pages/% Makefile
 	mkdir -p $(@D)
 	echo "$$CONTENT" > $@
 
