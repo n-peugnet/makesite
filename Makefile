@@ -114,7 +114,8 @@ description ?=
 # sanitize values
 description := $$(strip $$(subst ',,$$(description)))
 
-SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d)
+SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
+                             \! -name assets)
 SUBMETADATA := $$(patsubst $$(PAGE_DIR)/%,%/metadatas,$$(SUBPAGES))
 LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
 VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view)
@@ -122,6 +123,11 @@ PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
 PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
 ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
+
+JS         := $$(wildcard assets/*.js)
+CSS        := $$(wildcard assets/*.css)
+ICO        := $$(firstword $$(wildcard assets/favicon.*))
+ICO_EXT    := $$(subst .,,$$(suffix $$(ICO)))
 
 .PHONY: all
 all: index.html tags metadatas
@@ -222,7 +228,7 @@ endef
 
 ################################ Main Makefile #################################
 
-PAGES_LIST     := $(shell find pages -mindepth 1 -type d)
+PAGES_LIST     := $(shell find pages -mindepth 1 -type d \! -name assets)
 PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
@@ -242,11 +248,24 @@ HEAD_ICO   := $(patsubst %,<link href="$(basepath)%" rel="icon" \
 export ASSETS_SRC = $(patsubst %,$(CURDIR)/%,$(JS) $(CSS) $(ICO))
 export HEAD := $(HEAD_JS) $(HEAD_CSS) $(HEAD_ICO)
 
+ASSETS_DIR := $(shell find pages -mindepth 1 -type d -name assets)
+SUB_JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
+SUB_CSS    := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.css))
+SUB_ICO    := $(foreach d,$(ASSETS_DIR),$(firstword $(wildcard $(d)/favicon.*)))
+PUBLIC_SUB_JS  := $(SUB_JS:pages/%=public/%)
+PUBLIC_SUB_CSS := $(SUB_CSS:pages/%=public/%)
+PUBLIC_SUB_ICO := $(SUB_ICO:pages/%=public/%)
+SUB_ASSETS := $(PUBLIC_SUB_JS) $(PUBLIC_SUB_CSS) $(PUBLIC_SUB_ICO)
+
 .PHONY: site
 site: templates/layout/default.html templates/view/list.html public/index.html \
-      $(ASSETS)
+      $(ASSETS) $(SUB_ASSETS)
 
 public/assets/%: assets/% public/assets
+	cp $< $@
+
+$(SUB_ASSETS): public/%: pages/%
+	mkdir -p $(@D)
 	cp $< $@
 
 public/index.html: build/pages/index.html public
@@ -276,7 +295,7 @@ build/pages/%/Makefile: pages/% Makefile
 	echo "$$CONTENT" > $@
 
 # base folders needed
-public pages public/assets:
+public pages %/assets:
 	mkdir -p $@
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
