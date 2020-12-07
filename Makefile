@@ -23,7 +23,7 @@ description ?=
 # sanitize values
 description := $$(strip $$(subst ',,$$(description)))
 
-SUBPAGES    := $$(shell find $$(PAGE_DIR)/* -type d)
+SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d)
 SUBMETADATA := $$(patsubst $$(PAGE_DIR)/%,%/metadatas,$$(SUBPAGES))
 LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
@@ -34,12 +34,13 @@ ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
 all: index.html tags metadatas
 
 index.html: content.html subpages.html $$(LAYOUT_FILE) $$(CONFIG_FILE)
-	cp $$(LAYOUT_FILE) $$@
-	sed -i 's/{{title}}/$$(title)/g' $$@
-	sed -i 's/{{keywords}}/$$(keywords)/g' $$@
-	sed -i 's/{{description}}/$$(description)/g' $$@
-	sed -i -e '/{{content}}/{r content.html' -e 'd}' $$@
-	sed -i -e '/{{subpages}}/{r subpages.html' -e 'd}' $$@
+	cat $$(LAYOUT_FILE) \
+	| sed 's~{{title}}~$$(title)~g' \
+	| sed 's~{{keywords}}~$$(keywords)~g' \
+	| sed 's~{{description}}~$$(description)~g' \
+	| sed -e '/{{content}}/{r content.html' -e 'd}' \
+	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
+	> $$@
 
 content.html: $$(ALL_HTML)
 	if [ -n '$$^' ]; then cat $$^ > $$@; else touch $$@; fi
@@ -56,23 +57,24 @@ subpages.html: $$(SUBMETADATA)
 		description=$$$$(cut -f3 $$$$f); \
 		path=$$$$(cut -f4 $$$$f); \
 		cat $$(view) \
-		| sed "s/{{title}}/$$$$title/g" \
-		| sed "s/{{date}}/$$$$date/g" \
-		| sed "s/{{description}}/$$$$description/g" \
-		| sed "s/{{path}}/$$$$path/g" \
+		| sed "s~{{title}}~$$$$title~g" \
+		| sed "s~{{date}}~$$$$date~g" \
+		| sed "s~{{description}}~$$$$description~g" \
+		| sed "s~{{path}}~$$$$path~g" \
 		>> $$@; \
 	done
 	echo '</ul>' >> $$@
 
 %/metadatas: .FORCE
-	@$$(MAKE) -C $$(PREVDIR) public/$$*/index.html
+	@$$(MAKE) -C $$(PREVDIR) $$(subst //,/,public/$$(PAGE)/$$*/index.html)
 
 metadatas: $$(CONFIG_FILE)
 	echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
 
 tags: $$(TAGS_FILE)
-	cp $$< $$@
-	sed -i -e 's/$$$$/ $$(PAGE)/' $$@
+	cat $$< \
+	| sed 's~$$$$~ $$(PAGE)~g' \
+	> $$@
 
 $$(TAGS_FILE):
 	touch $$@
@@ -123,7 +125,7 @@ endef
 
 ################################ Main Makefile #################################
 
-PAGES_LIST     := $(shell find pages/* -type d)
+PAGES_LIST     := $(shell find pages -mindepth 1 -type d)
 PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
