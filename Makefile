@@ -17,16 +17,20 @@
 
 ################################## Principles ##################################
 
-# Makesite is a static-site-generator based on a mere Makefile. The content of
-# the website must be located in a directory called `pages`. The result of the
-# compilation will be located in the `public` directory. During the compilation,
-# Makesite will keep intermediate files in the `build` directory. This way it
-# does not have to recompile everything on each call. Lastly the `templates`
-# directory contains the view and layout files in their respective folders.
+# Makesite is a static-site-generator based on a mere Makefile.
+# The content of the website must be located in a directory called `pages`.
+# The result of the compilation will be located in the `public` directory.
+# During the compilation, Makesite will keep intermediate files in the `build`
+# directory. This way it does not have to recompile everything on each call.
+# If an `assets` directory is present, all the `.js` and `.css` files and the
+# `favicon.*` are automaticaly added to all pages.
+# Lastly the `templates` directory contains the view and layout files in their
+# respective folders.
 
 # Here is a summary of the tree structure's directories:
 #     .
 #     ├── Makefile                # This file
+#     ├── assets                  # Global assets files
 #     ├── build                   # Intermediate build files
 #     ├── pages                   # Pages content
 #     ├── public                  # Public website root
@@ -76,11 +80,12 @@
 
 # A static-site-generator based on a Makefile is not really the sanest idea.
 # This is why Makesite has some serious limitations. Here is the full list:
-# - The `space` character is not allowed in any file or folder name (and the use
+# - The ` ` character is not allowed in any file or folder name (and the use
 #   of any special character is strongly discouraged). It is recommended to
 #   replace it with `-`.
 # - The `~` character is not allowed in `config` files, as it is the one used
 #   for sed in Makesite.
+# - The name `assets` is reserved and cannot be used as a page name.
 
 include config
 
@@ -122,8 +127,9 @@ ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
 all: index.html tags metadatas
 
 index.html: content.html subpages.html $$(LAYOUT_FILE) $$(CONFIG_FILE) \
-            $$(ROOT_CONFIG)
+            $$(ROOT_CONFIG) $(ASSETS_SRC)
 	cat $$(LAYOUT_FILE) \
+	| sed 's~{{head}}~$$(HEAD)~g' \
 	| sed 's~{{sitename}}~$$(sitename)~g' \
 	| sed 's~{{title}}~$$(title)~g' \
 	| sed 's~{{keywords}}~$$(keywords)~g' \
@@ -189,6 +195,7 @@ define DEFAULT_TEMPLATE
 		<meta name="Title" content="{{title}} - {{sitename}}"/>
 		<meta name="Keywords" content="{{keywords}}"/>
 		<meta name="Description" content="{{description}}"/>
+		{{head}}
 	</head>
 	<body>
 		<section>
@@ -219,8 +226,28 @@ PAGES_LIST     := $(shell find pages -mindepth 1 -type d)
 PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
+JS         := $(wildcard assets/*.js)
+CSS        := $(wildcard assets/*.css)
+ICO        := $(wildcard assets/favicon.*)
+ICO_EXT    := $(subst .,,$(suffix $(ICO)))
+PUBLIC_JS  := $(JS:%=public/%)
+PUBLIC_CSS := $(CSS:%=public/%)
+PUBLIC_ICO := $(ICO:%=public/%)
+ASSETS     := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
+HEAD_JS    := $(patsubst %,<script src="$(basepath)%" async></script>,$(JS))
+HEAD_CSS   := $(patsubst %,<link href="$(basepath)%" rel="stylesheet"/>,$(CSS))
+HEAD_ICO   := $(patsubst %,<link href="$(basepath)%" rel="icon" \
+                            type="image/$(ICO_EXT)"/>,$(ICO))
+
+export ASSETS_SRC = $(patsubst %,$(CURDIR)/%,$(JS) $(CSS) $(ICO))
+export HEAD := $(HEAD_JS) $(HEAD_CSS) $(HEAD_ICO)
+
 .PHONY: site
-site: templates/layout/default.html templates/view/list.html public/index.html
+site: templates/layout/default.html templates/view/list.html public/index.html \
+      $(ASSETS)
+
+public/assets/%: assets/% public/assets
+	cp $< $@
 
 public/index.html: build/index.html public
 	cp $< $@
@@ -249,8 +276,8 @@ build/%/Makefile: pages/% Makefile
 	echo "$$CONTENT" > $@
 
 # base folders needed
-public pages:
-	mkdir $@
+public pages public/assets:
+	mkdir -p $@
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
 templates/layout/default.html: Makefile
