@@ -22,8 +22,8 @@
 # The result of the compilation will be located in the `public` directory.
 # During the compilation, Makesite will keep intermediate files in the `build`
 # directory. This way it does not have to recompile everything on each call.
-# If an `assets` directory is present, all the `.js` and `.css` files and the
-# `favicon.*` are automaticaly added to all pages.
+# If an `assets` directory is present, every `*.js`, `*.css` files and the
+# `favicon.*` it contains are automaticaly added to all pages.
 # Lastly the `templates` directory contains the view and layout files in their
 # respective folders.
 
@@ -41,6 +41,10 @@
 # In the `pages` directory, *every folder is a page*. Thus a *page's URL is its
 # path*. The content of a page is rendered from every `.md` and `.html` files it
 # contains, to which a list of the subpages is appended.
+
+# There is only one exceptions to this principle: each page can have a special
+# `assets` folder. As for the root one, every `*.js`, `*.css` files and the
+# `favicon.*` it contains are automatically added to the associated page.
 
 # Each page can contain a `config` file to override the default variables. Here
 # is a sample page's `config` file containing all the variables you can define
@@ -124,25 +128,34 @@ PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
 ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
 
-JS         := $$(wildcard assets/*.js)
-CSS        := $$(wildcard assets/*.css)
-ICO        := $$(firstword $$(wildcard assets/favicon.*))
-ICO_EXT    := $$(subst .,,$$(suffix $$(ICO)))
+JS      := $$(wildcard $$(PAGE_DIR)/assets/*.js)
+CSS     := $$(wildcard $$(PAGE_DIR)/assets/*.css)
+ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/assets/favicon.*))
+ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
+ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 .PHONY: all
 all: index.html tags metadatas
 
-index.html: content.html subpages.html $$(LAYOUT_FILE) $$(CONFIG_FILE) \
-            $$(ROOT_CONFIG) $(ASSETS_SRC)
+index.html: head.html content.html subpages.html $$(LAYOUT_FILE) \
+            $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
 	cat $$(LAYOUT_FILE) \
-	| sed 's~{{head}}~$$(HEAD)~g' \
 	| sed 's~{{sitename}}~$$(sitename)~g' \
 	| sed 's~{{title}}~$$(title)~g' \
 	| sed 's~{{keywords}}~$$(keywords)~g' \
 	| sed 's~{{description}}~$$(description)~g' \
+	| sed -e '/{{head}}/{r head.html' -e 'd}' \
 	| sed -e '/{{content}}/{r content.html' -e 'd}' \
 	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
 	> $$@
+
+head.html: HEAD_JS =$$(JS:$$(PAGE_DIR)/%=<script src="%" async></script>)
+head.html: HEAD_CSS=$$(CSS:$$(PAGE_DIR)/%=<link href="%" rel="stylesheet"/>)
+head.html: HEAD_ICO=$$(ICO:$$(PAGE_DIR)/%=<link href="%" rel="icon" \
+                                          type="image/$$(ICO_EXT)"/>)
+head.html: $$(PREVDIR)/build/head.html $$(ASSETS)
+	cp $$< $$@
+	echo '$$(HEAD_JS) $$(HEAD_CSS) $$(HEAD_ICO)' >> $$@
 
 content.html: $$(ALL_HTML)
 	if [ -n '$$^' ]; then cat $$^ > $$@; else touch $$@; fi
@@ -240,13 +253,6 @@ PUBLIC_JS  := $(JS:%=public/%)
 PUBLIC_CSS := $(CSS:%=public/%)
 PUBLIC_ICO := $(ICO:%=public/%)
 ASSETS     := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
-HEAD_JS    := $(patsubst %,<script src="$(basepath)%" async></script>,$(JS))
-HEAD_CSS   := $(patsubst %,<link href="$(basepath)%" rel="stylesheet"/>,$(CSS))
-HEAD_ICO   := $(patsubst %,<link href="$(basepath)%" rel="icon" \
-                            type="image/$(ICO_EXT)"/>,$(ICO))
-
-export ASSETS_SRC = $(patsubst %,$(CURDIR)/%,$(JS) $(CSS) $(ICO))
-export HEAD := $(HEAD_JS) $(HEAD_CSS) $(HEAD_ICO)
 
 ASSETS_DIR := $(shell find pages -mindepth 1 -type d -name assets)
 SUB_JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
@@ -258,10 +264,17 @@ PUBLIC_SUB_ICO := $(SUB_ICO:pages/%=public/%)
 SUB_ASSETS := $(PUBLIC_SUB_JS) $(PUBLIC_SUB_CSS) $(PUBLIC_SUB_ICO)
 
 .PHONY: site
-site: templates/layout/default.html templates/view/list.html public/index.html \
-      $(ASSETS) $(SUB_ASSETS)
+site: templates/layout/default.html templates/view/list.html \
+      build/head.html $(SUB_ASSETS) public/index.html
 
-public/assets/%: assets/% public/assets
+build/head.html: HEAD_JS =$(JS:%=<script src="$(basepath)%" async></script>)
+build/head.html: HEAD_CSS=$(CSS:%=<link href="$(basepath)%" rel="stylesheet"/>)
+build/head.html: HEAD_ICO=$(ICO:%=<link href="$(basepath)%" rel="icon" \
+                                   type="image/$(ICO_EXT)"/>)
+build/head.html: $(ASSETS)
+	echo '$(HEAD_JS) $(HEAD_CSS) $(HEAD_ICO)' > $@
+
+public/assets/%: assets/% build public/assets
 	cp $< $@
 
 $(SUB_ASSETS): public/%: pages/%
@@ -295,7 +308,7 @@ build/pages/%/Makefile: pages/% Makefile
 	echo "$$CONTENT" > $@
 
 # base folders needed
-public pages %/assets:
+build public pages public/assets:
 	mkdir -p $@
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
