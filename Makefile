@@ -3,8 +3,10 @@ PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
 define SUB_MAKEFILE
+PAGE        := $*
 PAGE_DIR    := $$(PREVDIR)/$<
 CONFIG_FILE := $$(PAGE_DIR)/config
+TAGS_FILE   := $$(PAGE_DIR)/tags
 include $$(CONFIG_FILE)
 
 title       ?= $$(notdir $$(PAGE_DIR))
@@ -18,6 +20,8 @@ PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
 ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
 
+all: index.html tags
+
 index.html: content.html $$(LAYOUT_FILE) $$(CONFIG_FILE)
 	cp $$(LAYOUT_FILE) $$@
 	sed -i 's/{{title}}/$$(title)/g' $$@
@@ -30,6 +34,13 @@ content.html: $$(ALL_HTML)
 
 %.md.html: $$(PAGE_DIR)/%.md
 	cmark $$< > $$@
+
+tags: $$(TAGS_FILE)
+	cp $$< $$@
+	sed -i -e 's/$$$$/ $$(PAGE)/' $$@
+
+$$(TAGS_FILE):
+	touch $$@
 
 $$(CONFIG_FILE):
 	touch $$@
