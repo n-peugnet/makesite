@@ -115,11 +115,17 @@
 # A static-site-generator based on a Makefile is not really the sanest idea.
 # This is why Makesite has some serious limitations. Here is the full list:
 # - The ` ` character is not allowed in any file or folder name (and the use
-#   of any special character is strongly discouraged). It is recommended to
-#   replace it with `-`.
+#   of any special character is strongly discouraged). Instead you can use the
+#   character `_` which will be converted to space in the default title.
 # - The `~` character is not allowed in `config` files, as it is the one used
 #   for sed in Makesite.
 # - The name `assets` is reserved and cannot be used as a page name.
+
+################################# Contributing #################################
+
+# To help contributing, here is a target for devloppers only:
+#
+#     make dev
 
 include config
 
@@ -139,7 +145,8 @@ CONFIG_FILE := $$(wildcard $$(PAGE_DIR)/config)
 include $$(CONFIG_FILE)
 
 # default config values
-title       ?= $$(notdir $$(PAGE_DIR))
+title       ?= $(shell echo $(notdir $(subst _, ,/$<)) \
+                       | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
 layout      ?= default.html
 view        ?= list.html
 date        ?= $$(shell stat -c %Y $$(PAGE_DIR))
@@ -334,7 +341,6 @@ templates/layout/default.html: Makefile
 	mkdir -p $(@D)
 	echo "$$CONTENT" > $@
 
-
 templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
 templates/view/list.html: Makefile
 	mkdir -p $(@D)
@@ -352,8 +358,15 @@ buildclean:
 	rm -rf templates/layout/default.html
 	rm -rf templates/view/list.html
 
-.PHONY:
+.PHONY: siteclean
 siteclean:
 	rm -rf public
+
+.PHONY: dev
+dev: .gitignore
+
+.gitignore:
+	echo '*' > $@
+	echo '!Makefile' >> $@
 
 .FORCE:
