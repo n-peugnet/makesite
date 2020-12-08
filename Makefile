@@ -60,6 +60,8 @@
 #
 #     sitename = Makesite
 #     basepath = some/sub/folder
+#     layout = custom.html
+#     view = title.html
 
 ################################# Dependencies #################################
 
@@ -98,6 +100,16 @@
 #
 # This will ensure that the deleted content is removed from your website.
 
+################################ Customization #################################
+
+# It is of course possible to customize the website created by a great extent.
+# Any number of templates can be added in their respective folder and used in
+# specific pages or all of them using the `layout` and `view` variables of the
+# according `config` file.
+
+# Styles can also be easily defined for one or a set of pages by adding `.css`
+# files in the `assets` folders.
+
 ################################# Limitations ##################################
 
 # A static-site-generator based on a Makefile is not really the sanest idea.
@@ -114,6 +126,8 @@ include config
 # default config values
 export sitename       ?= Makesite
 export basepath       := $(subst //,/,/$(basepath)/)
+export layout         ?= default.html
+export view           ?= list.html
 
 ################################# SubMakefile ##################################
 
@@ -191,7 +205,7 @@ content.html: $$(ALL_HTML)
 %.md.html: $$(PAGE_DIR)/%.md
 	cmark $$< > $$@
 
-subpages.html: $$(SUBMETADATA) $$(VIEW_FILE)
+subpages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
 	for f in $$(SUBMETADATA); \
