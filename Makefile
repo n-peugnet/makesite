@@ -115,6 +115,8 @@ description ?=
 description := $$(strip $$(subst ',,$$(description)))
 
 PAGESDIR    := $$(PREVDIR)/pages
+PARENT      := $(patsubst pages%$(notdir $*),%,$<)
+SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
                              \! -name assets)
 SUBMETADATA := $$(patsubst $$(PAGE_DIR)/%,%/metadatas,$$(SUBPAGES))
@@ -132,16 +134,17 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 .PHONY: all
-all: index.html metadatas
+all: index.html
 
-index.html: head.html content.html subpages.html $$(LAYOUT_FILE) \
-            $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
+index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
+            $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
 	cat $$(LAYOUT_FILE) \
 	| sed 's~{{sitename}}~$$(sitename)~g' \
 	| sed 's~{{title}}~$$(title)~g' \
 	| sed 's~{{keywords}}~$$(keywords)~g' \
 	| sed 's~{{description}}~$$(description)~g' \
 	| sed -e '/{{head}}/{r head.html' -e 'd}' \
+	| sed -e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
 	| sed -e '/{{content}}/{r content.html' -e 'd}' \
 	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
 	> $$@
@@ -153,6 +156,13 @@ head.html: HEAD_ICO=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" 
 head.html: ../head.html $$(ASSETS)
 	cp $$< $$@
 	echo '$$(HEAD_JS) $$(HEAD_CSS) $$(HEAD_ICO)' >> $$@
+
+breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
+	cp $$< $$@
+ifneq ($$(strip $$(PARENT)),)
+	echo  '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
+	       >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR)' >> $$@
+endif
 
 content.html: $$(ALL_HTML)
 	if [ -n '$$^' ]; then cat $$^ > $$@; else touch $$@; fi
@@ -177,12 +187,14 @@ subpages.html: $$(SUBMETADATA)
 	done
 	echo '</ul>' >> $$@
 
-%/metadatas: .FORCE
+$$(SUBMETADATA): %/metadatas: .FORCE
 	@$$(MAKE) -C $$(PREVDIR) $$(subst //,/,public/$$(PAGE)/$$*/index.html)
 
 metadatas: $$(CONFIG_FILE)
 	echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
 
+../head.html ../breadcrumbs.html:
+	touch $$@
 .FORCE:
 endef
 
@@ -204,6 +216,7 @@ define DEFAULT_TEMPLATE
 	</head>
 	<body>
 		<section>
+			<p>{{breadcrumbs}}</p>
 			<h1>{{title}}</h1>
 			{{content}}
 		</section>
@@ -242,11 +255,7 @@ ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
 
 .PHONY: site
 site: templates/layout/default.html templates/view/list.html \
-      build/head.html public/index.html $(ASSETS)
-
-build/head.html:
-	mkdir $(@D)
-	touch $@
+      public/index.html $(ASSETS)
 
 public/assets/%: assets/%
 	mkdir -p $(@D)
