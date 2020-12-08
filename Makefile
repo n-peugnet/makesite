@@ -260,16 +260,19 @@ build/head.html: HEAD_CSS=$(CSS:%=<link href="$(basepath)%" rel="stylesheet"/>)
 build/head.html: HEAD_ICO=$(ICO:%=<link href="$(basepath)%" rel="icon" \
                                    type="image/$(ICO_EXT)"/>)
 build/head.html: $(ASSETS)
+	mkdir -p $(@D)
 	echo '$(HEAD_JS) $(HEAD_CSS) $(HEAD_ICO)' > $@
 
-public/assets/%: assets/% build public/assets
+public/assets/%: assets/%
+	mkdir -p $(@D)
 	cp $< $@
 
 $(SUB_ASSETS): public/%: pages/%
 	mkdir -p $(@D)
 	cp $< $@
 
-public/index.html: build/pages/index.html public
+public/index.html: build/pages/index.html
+	mkdir -p $(@D)
 	cp $< $@
 
 .PRECIOUS: build/pages/index.html
@@ -294,10 +297,6 @@ build/pages/%/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/%/Makefile: pages/% Makefile
 	mkdir -p $(@D)
 	echo "$$CONTENT" > $@
-
-# base folders needed
-build public pages public/assets:
-	mkdir -p $@
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
 templates/layout/default.html: Makefile
