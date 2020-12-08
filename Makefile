@@ -103,8 +103,7 @@ define SUB_MAKEFILE
 PAGE        := $*
 PAGE_DIR    := $$(PREVDIR)/$<
 ROOT_CONFIG := $$(PREVDIR)/config
-CONFIG_FILE := $$(PAGE_DIR)/config
-TAGS_FILE   := $$(PAGE_DIR)/tags
+CONFIG_FILE := $$(wildcard $$(PAGE_DIR)/config)
 include $$(CONFIG_FILE)
 
 # default config values
@@ -135,7 +134,7 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 .PHONY: all
-all: index.html tags metadatas
+all: index.html metadatas
 
 index.html: head.html content.html subpages.html $$(LAYOUT_FILE) \
             $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
@@ -185,17 +184,6 @@ subpages.html: $$(SUBMETADATA)
 
 metadatas: $$(CONFIG_FILE)
 	echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
-
-tags: $$(TAGS_FILE)
-	cat $$< \
-	| sed 's~$$$$~ $$(PAGE)~g' \
-	> $$@
-
-$$(TAGS_FILE):
-	touch $$@
-
-$$(CONFIG_FILE):
-	touch $$@
 
 .FORCE:
 endef
