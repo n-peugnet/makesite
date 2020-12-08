@@ -71,11 +71,32 @@
 # These programs are optional dependencies for some features to work properly:
 # - cmark <https://github.com/commonmark/cmark> for markdown files rendering.
 
-#################################### Usage #####################################
+################################### Tutorial ###################################
 
-# Simply copy and paste this file in the directory of your website sources then
-# run:
+# Download the latest version of this file in an empty directory and run it:
+#
+#     wget https://github.com/n-peugnet/makesite/raw/master/Makefile
 #     make site
+#
+# This will create the base directory structure detailled above and the first
+# page of your website: `index.html` in the `public` directory. To browse the
+# website you will have to make it accessible with a webserver.
+# To add content to the home page you can add an `.html` file in the `pages`
+# folder then run once again:
+#
+#     make site
+
+# You can also add new directories in `pages` to create new pages.
+# Makesite will automatically add links in the parent page and breadcrumbs to
+# every pages to make your website fully navigable.
+# For this feature to work properly you will have to set the `basepath` variable
+# accordingly.
+
+# If you deleted some files from the `pages` directory, then its better to run:
+#
+#     make clean site
+#
+# This will ensure that the deleted content is removed from your website.
 
 ################################# Limitations ##################################
 
@@ -91,7 +112,7 @@
 include config
 
 # default config values
-export sitename       ?=
+export sitename       ?= Makesite
 export basepath       := $(subst //,/,/$(basepath)/)
 
 ################################# SubMakefile ##################################
@@ -149,13 +170,13 @@ index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
 	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
 	> $$@
 
-head.html: HEAD_JS =$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
-head.html: HEAD_CSS=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet"/>)
-head.html: HEAD_ICO=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
-                                          type="image/$$(ICO_EXT)"/>)
+head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
+head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
+head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
+                                    type="image/$$(ICO_EXT)">)
 head.html: ../head.html $$(ASSETS)
 	cp $$< $$@
-	echo '$$(HEAD_JS) $$(HEAD_CSS) $$(HEAD_ICO)' >> $$@
+	echo '$$(J) $$(C) $$(I)' >> $$@
 
 breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
 	cp $$< $$@
@@ -170,9 +191,10 @@ content.html: $$(ALL_HTML)
 %.md.html: $$(PAGE_DIR)/%.md
 	cmark $$< > $$@
 
-subpages.html: $$(SUBMETADATA)
+subpages.html: $$(SUBMETADATA) $$(VIEW_FILE)
 	echo '<ul>' > $$@
-	for f in $$^; \
+ifneq ($$(strip $$(SUBMETADATA)),)
+	for f in $$(SUBMETADATA); \
 	do \
 		title=$$$$(cut -f1 $$$$f); \
 		date=$$$$(cut -f2 $$$$f); \
@@ -185,6 +207,7 @@ subpages.html: $$(SUBMETADATA)
 		| sed "s~{{path}}~$$(basepath)$$$$path~g" \
 		>> $$@; \
 	done
+endif
 	echo '</ul>' >> $$@
 
 $$(SUBMETADATA): %/metadatas: .FORCE
@@ -254,12 +277,11 @@ PUBLIC_ICO := $(ICO:pages/%=public/%)
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
 
 .PHONY: site
-site: templates/layout/default.html templates/view/list.html \
+site: pages templates/layout/default.html templates/view/list.html \
       public/index.html $(ASSETS)
 
-public/assets/%: assets/%
-	mkdir -p $(@D)
-	cp $< $@
+pages:
+	mkdir $@
 
 $(ASSETS): public/%: pages/%
 	mkdir -p $(@D)
@@ -269,8 +291,16 @@ public/index.html: build/pages/index.html
 	mkdir -p $(@D)
 	cp $< $@
 
+public/%/index.html: build/pages/%/index.html
+	mkdir -p $(@D)
+	cp $< $@
+
 .PRECIOUS: build/pages/index.html
 build/pages/index.html: build/pages/Makefile .FORCE
+	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
+
+.PRECIOUS: build/pages/%/index.html
+build/pages/%/index.html: build/pages/%/Makefile .FORCE
 	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
 
 .PRECIOUS: build/pages/Makefile
@@ -278,14 +308,6 @@ build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/Makefile: pages Makefile
 	mkdir -p $(@D)
 	echo "$$CONTENT" > $@
-
-public/%/index.html: build/pages/%/index.html
-	mkdir -p $(@D)
-	cp $< $@
-
-.PRECIOUS: build/pages/%/index.html
-build/pages/%/index.html: build/pages/%/Makefile .FORCE
-	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
 
 .PRECIOUS: build/pages/%/Makefile
 build/pages/%/Makefile: export CONTENT=$(SUB_MAKEFILE)
@@ -306,9 +328,6 @@ templates/view/list.html: Makefile
 
 config:
 	touch $@
-
-$(PUBLIC_PAGES):
-	mkdir -p $@
 
 .PHONY: clean
 clean: siteclean buildclean
