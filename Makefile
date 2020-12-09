@@ -121,9 +121,9 @@
 #   for sed in Makesite.
 # - The name `assets` is reserved and cannot be used as a page name.
 
-################################# Contributing #################################
+################################# Developement #################################
 
-# To help contributing, here is a target for devloppers only:
+# Here is a special target to get developers started:
 #
 #     make dev
 
@@ -231,6 +231,7 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 endif
 	echo '</ul>' >> $$@
 
+# metadatas of childrens require childrens to be built.
 $$(SUBMETADATA): %/metadatas: .FORCE
 	@$$(MAKE) -C $$(PREVDIR) $$(subst //,/,public/$$(PAGE)/$$*/index.html)
 
@@ -308,20 +309,12 @@ $(ASSETS): public/%: pages/%
 	mkdir -p $(@D)
 	cp $< $@
 
-public/index.html: build/pages/index.html
+public/index.html $(PUBLIC_INDEXES): public/%: build/pages/%
 	mkdir -p $(@D)
 	cp $< $@
 
-public/%/index.html: build/pages/%/index.html
-	mkdir -p $(@D)
-	cp $< $@
-
-.PRECIOUS: build/pages/index.html
-build/pages/index.html: build/pages/Makefile .FORCE
-	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
-
-.PRECIOUS: build/pages/%/index.html
-build/pages/%/index.html: build/pages/%/Makefile .FORCE
+.PRECIOUS: build/%/index.html
+build/%/index.html: build/%/Makefile .FORCE
 	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
 
 .PRECIOUS: build/pages/Makefile
