@@ -161,7 +161,8 @@ PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
                              \! -name assets)
-SUBMETADATA := $$(patsubst $$(PAGE_DIR)/%,%/metadatas,$$(SUBPAGES))
+SUBBUILDS   := $$(SUBPAGES:$$(PAGE_DIR)/%=%)
+SUBMETADATA := $$(SUBBUILDS:%=%/metadatas)
 LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
 VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view)
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
@@ -212,7 +213,7 @@ content.html: $$(ALL_HTML)
 %.md.html: $$(PAGE_DIR)/%.md
 	cmark $$< > $$@
 
-subpages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
+subpages.html: $$(SUBBUILDS) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
 	for f in $$(SUBMETADATA); \
@@ -231,9 +232,8 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 endif
 	echo '</ul>' >> $$@
 
-# metadatas of childrens require childrens to be built.
-$$(SUBMETADATA): %/metadatas: .FORCE
-	@$$(MAKE) -C $$(PREVDIR) $$(subst //,/,public/$$(PAGE)/$$*/index.html)
+$$(SUBBUILDS): head.html breadcrumbs.html metadatas .FORCE
+	@$$(MAKE) -C $$@
 
 metadatas: $$(CONFIG_FILE)
 	echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
@@ -286,6 +286,7 @@ endef
 ################################ Main Makefile #################################
 
 PAGES_LIST     := $(shell find pages -mindepth 1 -type d \! -name assets)
+BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGES_LIST))
 PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
 
@@ -300,7 +301,7 @@ ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
 
 .PHONY: site
 site: pages templates/layout/default.html templates/view/list.html \
-      public/index.html $(ASSETS)
+      public/index.html $(ASSETS) $(PUBLIC_INDEXES)
 
 pages:
 	mkdir $@
@@ -309,13 +310,17 @@ $(ASSETS): public/%: pages/%
 	mkdir -p $(@D)
 	cp $< $@
 
-public/index.html $(PUBLIC_INDEXES): public/%: build/pages/%
+public/index.html $(PUBLIC_INDEXES): public/%: build/pages/% \
+                  build/pages/index.html
 	mkdir -p $(@D)
 	cp $< $@
 
-.PRECIOUS: build/%/index.html
-build/%/index.html: build/%/Makefile .FORCE
+.PRECIOUS: build/pages/index.html
+build/pages/index.html: build/pages/Makefile $(BUILD_MK_LIST) .FORCE
 	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
+
+# This recipe makes the targets depend on the above recursive make call.
+build/pages/%/index.html: build/pages/index.html ;
 
 .PRECIOUS: build/pages/Makefile
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
