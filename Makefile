@@ -135,6 +135,8 @@ export basepath       := $(subst //,/,/$(basepath)/)
 export layout         ?= default.html
 export view           ?= list.html
 
+export a:=$(if $(debug),,@)
+
 ################################# SubMakefile ##################################
 
 define SUB_MAKEFILE
@@ -176,12 +178,13 @@ ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/assets/favicon.*))
 ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
+# Default target.
 .PHONY: build/$<
 build/$<: index.html
 
 index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
             $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
-	cat $$(LAYOUT_FILE) \
+	$$(a)cat $$(LAYOUT_FILE) \
 	| sed 's~{{sitename}}~$$(sitename)~g' \
 	| sed 's~{{title}}~$$(title)~g' \
 	| sed 's~{{keywords}}~$$(keywords)~g' \
@@ -191,32 +194,41 @@ index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
 	| sed -e '/{{content}}/{r content.html' -e 'd}' \
 	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
 	> $$@
+	#GEN build/$</$$@
 
 head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
 head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
 head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
                                     type="image/$$(ICO_EXT)">)
 head.html: ../head.html $$(ASSETS)
-	cp $$< $$@
-	echo '$$(J) $$(C) $$(I)' >> $$@
+	$$(a)cp $$< $$@
+	$$(a)echo '$$(J) $$(C) $$(I)' >> $$@
+	#GEN build/$</$$@
 
 breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
-	cp $$< $$@
+	$$(a)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
-	echo  '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
-	       >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR)' >> $$@
+	$$(a)echo '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
+	           >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR)' >> $$@
 endif
+	#GEN build/$</$$@
 
 content.html: $$(ALL_HTML)
-	if [ -n '$$^' ]; then cat $$^ > $$@; else touch $$@; fi
+ifneq ($$(strip $$(ALL_HTML)),)
+	$$(a)cat $$^ > $$@
+	#GEN build/$</$$@
+else
+	$$(a)touch $$@
+endif
 
 %.md.html: $$(PAGE_DIR)/%.md
-	cmark $$< > $$@
+	$$(a)cmark $$< > $$@
+	#MDC build/$</$$@
 
 subpages.html: $$(SUBBUILDS) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
-	echo '<ul>' > $$@
+	$$(a)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
-	for f in $$(SUBMETADATA); \
+	$$(a)for f in $$(SUBMETADATA); \
 	do \
 		title=$$$$(cut -f1 $$$$f); \
 		date=$$$$(cut -f2 $$$$f); \
@@ -230,16 +242,18 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 		>> $$@; \
 	done
 endif
-	echo '</ul>' >> $$@
+	$$(a)echo '</ul>' >> $$@
+	#GEN build/$</$$@
 
 $$(SUBBUILDS): head.html breadcrumbs.html metadatas .FORCE
-	@$$(MAKE) -C $$@
+	$$(a)$$(MAKE) -C $$@
 
 metadatas: $$(CONFIG_FILE)
-	echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
+	$$(a)echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
+	#GEN build/$</$$@
 
 ../head.html ../breadcrumbs.html:
-	touch $$@
+	$$(a)touch $$@
 .FORCE:
 endef
 
@@ -304,64 +318,76 @@ site: pages templates/layout/default.html templates/view/list.html \
       public/index.html $(ASSETS) $(PUBLIC_INDEXES)
 
 pages:
-	mkdir $@
+	$(a)mkdir $@
+	#CREA $@ directory
 
 $(ASSETS): public/%: pages/%
-	mkdir -p $(@D)
-	cp $< $@
+	$(a)mkdir -p $(@D)
+	$(a)cp $< $@
+	#PUB $@
 
 public/index.html $(PUBLIC_INDEXES): public/%: build/pages/% \
                   build/pages/index.html
-	mkdir -p $(@D)
-	cp $< $@
+	$(a)mkdir -p $(@D)
+	$(a)cp $< $@
+	#PUB $@
 
-.PRECIOUS: build/pages/index.html
 build/pages/index.html: build/pages/Makefile $(BUILD_MK_LIST) .FORCE
-	@$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
+	$(a)$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
 
 # This recipe makes the targets depend on the above recursive make call.
 build/pages/%/index.html: build/pages/index.html ;
 
-.PRECIOUS: build/pages/Makefile
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/Makefile: pages Makefile
-	mkdir -p $(@D)
-	echo "$$CONTENT" > $@
+	$(a)mkdir -p $(@D)
+	$(a)echo "$$CONTENT" > $@
+	#GEN $@
 
-.PRECIOUS: build/pages/%/Makefile
 build/pages/%/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/%/Makefile: pages/% Makefile
-	mkdir -p $(@D)
-	echo "$$CONTENT" > $@
+	$(a)mkdir -p $(@D)
+	$(a)echo "$$CONTENT" > $@
+	#GEN $@
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
 templates/layout/default.html: Makefile
-	mkdir -p $(@D)
-	echo "$$CONTENT" > $@
+	$(a)mkdir -p $(@D)
+	$(a)echo "$$CONTENT" > $@
+	#GEN $@
 
 templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
 templates/view/list.html: Makefile
-	mkdir -p $(@D)
-	echo "$$CONTENT" > $@
+	$(a)mkdir -p $(@D)
+	$(a)echo "$$CONTENT" > $@
+	#GEN $@
 
 config:
-	touch $@
+	$(a)touch $@
+	#CREA $@
 
 .PHONY: clean
-clean: siteclean buildclean
+clean: siteclean buildclean templatesclean
 
 .PHONY: buildclean
 buildclean:
-	rm -rf build
-	rm -rf templates/layout/default.html
-	rm -rf templates/view/list.html
+	$(a)rm -rf build
+	#RMV build files
+
+.PHONY: templatesclean
+templatesclean:
+	$(a)rm -rf templates/layout/default.html
+	$(a)rm -rf templates/view/list.html
+	#RMV template files
 
 .PHONY: siteclean
 siteclean:
-	rm -rf public
+	$(a)rm -rf public
+	#RMV public files
 
 .PHONY: dev
 dev: .gitignore
+	echo debug = 1 > config
 
 .gitignore:
 	echo '*' > $@
