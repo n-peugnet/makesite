@@ -140,10 +140,11 @@ export a:=$(if $(debug),,@)
 ################################# SubMakefile ##################################
 
 define SUB_MAKEFILE
-PAGE        := $*
+PAGE        := $*/
 PAGE_DIR    := $$(PREVDIR)/$<
 ROOT_CONFIG := $$(PREVDIR)/config
 CONFIG_FILE := $$(wildcard $$(PAGE_DIR)/config)
+TAGS_FILE   := $$(wildcard $$(PAGE_DIR)/tags)
 include $$(CONFIG_FILE)
 
 # default config values
@@ -167,6 +168,7 @@ SUBBUILDS   := $$(SUBPAGES:$$(PAGE_DIR)/%=%)
 SUBMETADATA := $$(SUBBUILDS:%=%/metadatas)
 LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
 VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view)
+TAG_VIEW    := $$(PREVDIR)/templates/view/tag.html
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
 PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
@@ -180,9 +182,9 @@ ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 # Default target.
 .PHONY: build/$<
-build/$<: index.html
+build/$<: index.html metadatas tagspage
 
-index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
+index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
             $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
 	$$(a)cat $$(LAYOUT_FILE) \
 	| sed 's~{{sitename}}~$$(sitename)~g' \
@@ -191,6 +193,7 @@ index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
 	| sed 's~{{description}}~$$(description)~g' \
 	| sed -e '/{{head}}/{r head.html' -e 'd}' \
 	| sed -e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
+	| sed -e '/{{tags}}/{r tags.html' -e 'd}' \
 	| sed -e '/{{content}}/{r content.html' -e 'd}' \
 	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
 	> $$@
@@ -228,8 +231,7 @@ endif
 subpages.html: $$(SUBBUILDS) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	$$(a)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
-	$$(a)for f in $$(SUBMETADATA); \
-	do \
+	$$(a)for f in $$(SUBMETADATA); do \
 		title=$$$$(cut -f1 $$$$f); \
 		date=$$$$(cut -f2 $$$$f); \
 		description=$$$$(cut -f3 $$$$f); \
@@ -249,8 +251,28 @@ $$(SUBBUILDS): head.html breadcrumbs.html metadatas .FORCE
 	$$(a)$$(MAKE) -C $$@
 
 metadatas: $$(CONFIG_FILE)
-	$$(a)echo '$$(title)	$$(date)	$$(description)	$$(PAGE)' > $$@
+	$$(a)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
 	#GEN build/$</$$@
+
+tagspage: tags
+	$$(a)sed -e 's~$$$$~\t$$(PAGE)~' $$< > $$@
+	#GEN build/$</$$@
+
+tags.html: tags
+	$$(a)echo '<ul>' > $$@
+	$$(a)cat $$< | while read tag; do \
+		sed "s~{{tag}}~$$$$tag~g" $$(TAG_VIEW) >> $$@; \
+	done
+	$$(a)echo '</ul>' >> $$@
+	#GEN build/$</$$@
+
+tags: $$(TAGS_FILE)
+ifneq ($$(strip $$(TAGS_FILE)),)
+	$$(a)uniq $$< | sed -e 's~\\s~-~' > $$@
+	#GEN build/$</$$@
+else
+	$$(a)touch $$@
+endif
 
 ../head.html ../breadcrumbs.html:
 	$$(a)touch $$@
@@ -277,6 +299,7 @@ define DEFAULT_TEMPLATE
 		<section>
 			<p>{{breadcrumbs}}</p>
 			<h1>{{title}}</h1>
+			{{tags}}
 			{{content}}
 		</section>
 		<section>
@@ -297,12 +320,22 @@ define DEFAULT_LISTVIEW
 </li>
 endef
 
+############################### Default tagview ################################
+
+define DEFAULT_TAGVIEW
+<li>
+	<span class="tag tag-{{tag}}">{{tag}}</span>
+</li>
+endef
+
 ################################ Main Makefile #################################
 
-PAGES_LIST     := $(shell find pages -mindepth 1 -type d \! -name assets)
-BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGES_LIST))
-PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGES_LIST))
-PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES))
+PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
+PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
+BUILD_TAGS_LIST:= $(patsubst %,build/%page,$(PAGE_TAGS_LIST))
+BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGE_LIST))
+PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGE_LIST))
+PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) public/index.html
 
 ASSETS_DIR := $(shell find pages -mindepth 1 -type d -name assets)
 JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
@@ -313,9 +346,11 @@ PUBLIC_CSS := $(CSS:pages/%=public/%)
 PUBLIC_ICO := $(ICO:pages/%=public/%)
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
 
+TEMPLATES := layout/default view/list view/tag
+TEMPLATES := $(TEMPLATES:%=templates/%.html)
+
 .PHONY: site
-site: pages templates/layout/default.html templates/view/list.html \
-      public/index.html $(ASSETS) $(PUBLIC_INDEXES)
+site: pages $(TEMPLATES) $(ASSETS) $(PUBLIC_INDEXES) build/tags
 
 pages:
 	$(a)mkdir $@
@@ -326,16 +361,16 @@ $(ASSETS): public/%: pages/%
 	$(a)cp $< $@
 	#PUB $@
 
-public/index.html $(PUBLIC_INDEXES): public/%: build/pages/%
+$(PUBLIC_INDEXES): public/%: build/pages/%
 	$(a)mkdir -p $(@D)
 	$(a)cp $< $@
 	#PUB $@
 
-build/pages/index.html: build/pages/Makefile $(BUILD_MK_LIST) .FORCE
-	$(a)$(MAKE) -C $(@D) PREVDIR=$(CURDIR)
+build/%/index.html: build/pages ;
 
-# This recipe makes the targets depend on the above recursive make call.
-build/pages/%/index.html: build/pages/index.html ;
+.PHONY: build/pages
+build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(TEMPLATES)
+	$(a)$(MAKE) -C $@ PREVDIR=$(CURDIR)
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/Makefile: pages Makefile
@@ -349,14 +384,22 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
-templates/layout/default.html: Makefile
-	$(a)mkdir -p $(@D)
-	$(a)echo "$$CONTENT" > $@
+build/tags: build/tagspage
+	$(a)cut $< -f1 | uniq > $@
 	#GEN $@
 
+build/tagspage: $(BUILD_TAGS_LIST) build/pages/index.html
+ifneq ($$(strip $$(BUILD_TAGS_LIST)),)
+	$(a)cat $(BUILD_TAGS_LIST) > $@
+	#GEN $@
+else
+	$(a)touch $@
+endif
+
+templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
 templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
-templates/view/list.html: Makefile
+templates/view/tag.html: export CONTENT=$(DEFAULT_TAGVIEW)
+$(TEMPLATES): Makefile
 	$(a)mkdir -p $(@D)
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
@@ -375,8 +418,7 @@ buildclean:
 
 .PHONY: templatesclean
 templatesclean:
-	$(a)rm -rf templates/layout/default.html
-	$(a)rm -rf templates/view/list.html
+	$(a)rm -rf $(TEMPLATES)
 	#RMV template files
 
 .PHONY: siteclean
