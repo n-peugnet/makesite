@@ -326,8 +326,7 @@ $(ASSETS): public/%: pages/%
 	$(a)cp $< $@
 	#PUB $@
 
-public/index.html $(PUBLIC_INDEXES): public/%: build/pages/% \
-                  build/pages/index.html
+public/index.html $(PUBLIC_INDEXES): public/%: build/pages/%
 	$(a)mkdir -p $(@D)
 	$(a)cp $< $@
 	#PUB $@
