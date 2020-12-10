@@ -41,7 +41,7 @@
 
 # There is only one exception to this principle: each page can have a special
 # `assets` folder. Every `*.js`, `*.css` files and the `favicon.*` it contains
-# are automatically added to the associated page and all of its childrens.
+# are automatically added to the associated page and all of its children.
 
 # Each page can contain a `config` file to override the default variables. Here
 # is a sample page's `config` file containing all the variables you can define
@@ -386,10 +386,10 @@ siteclean:
 
 .PHONY: dev
 dev: .gitignore
-	echo debug = 1 > config
+	echo debug = 1 >> config
 
 .gitignore:
-	echo '*' > $@
+	echo '*' >> $@
 	echo '!Makefile' >> $@
 
 .FORCE:
