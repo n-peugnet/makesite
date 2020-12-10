@@ -176,8 +176,8 @@ ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/assets/favicon.*))
 ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
-.PHONY: all
-all: index.html
+.PHONY: build/$<
+build/$<: index.html
 
 index.html: metadatas head.html breadcrumbs.html content.html subpages.html \
             $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
