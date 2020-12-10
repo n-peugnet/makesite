@@ -350,7 +350,7 @@ TEMPLATES := layout/default view/list view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
 
 .PHONY: site
-site: pages $(TEMPLATES) $(ASSETS) $(PUBLIC_INDEXES) build/tags
+site: pages build/tags $(TEMPLATES) $(ASSETS) $(PUBLIC_INDEXES)
 
 pages:
 	$(a)mkdir $@
@@ -388,13 +388,15 @@ build/tags: build/tagspage
 	$(a)cut $< -f1 | uniq > $@
 	#GEN $@
 
-build/tagspage: $(BUILD_TAGS_LIST) build/pages/index.html
+build/tagspage: $(BUILD_TAGS_LIST)
 ifneq ($$(strip $$(BUILD_TAGS_LIST)),)
 	$(a)cat $(BUILD_TAGS_LIST) > $@
 	#GEN $@
 else
 	$(a)touch $@
 endif
+
+$(BUILD_TAGS_LIST): build/pages ;
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
 templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
