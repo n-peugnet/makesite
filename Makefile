@@ -268,7 +268,7 @@ tags.html: tags
 		sed $$(TAG_VIEW) \
 		-e "s~{{tag}}~$$$$tag~g" \
 		-e "s~{{path}}~$$(basepath)/tags/$$$$tag~g" \
-		>> $$@; \
+		| tr -d '\\n' >> $$@; \
 	done
 	$$(a)echo '</ul>' >> $$@
 	#GEN build/$</$$@
@@ -303,8 +303,8 @@ define DEFAULT_LAYOUT
 		{{head}}
 		<style>
 		.tags ul {padding: 0;}
-		.tag {list-style-type: none; display: inline; padding: 2px 5px;\
-		      border-radius: 10px; margin: 2px; background-color: grey;}
+		.tag {list-style-type: none; display: inline-block; margin:2px;\
+padding: 2px 5px; background-color: grey; border-radius: 10px;}
 		.tag a {color: white; text-decoration: none;}
 		</style>
 	</head>
