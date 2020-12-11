@@ -56,12 +56,13 @@
 
 # There is a "root `config` file" at the same level as this file that contains
 # the website's global configuration. Here are the variables that can be set
-# inside:
+# inside (all of them are optional):
 #
 #     sitename = Makesite
 #     basepath = some/sub/folder
 #     layout = custom.html
 #     view = title.html
+#     imagesext = png|gif
 
 # It is possible to add tags to a page by adding each of them in a new line of
 # its `tags` file. These tags will replace the `{{tags}}` portion of the layout
@@ -138,6 +139,7 @@ export sitename       ?= Makesite
 export basepath       := $(subst //,/,/$(basepath)/)
 export layout         ?= default.html
 export view           ?= list.html
+export imagesext      ?= png|jpe?g|gif|tiff
 
 export a:=$(if $(debug),,@)
 
@@ -207,7 +209,7 @@ head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
 head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
 head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
                                     type="image/$$(ICO_EXT)">)
-head.html: ../head.html $$(ASSETS)
+head.html: ../head.html | $$(ASSETS)
 	$$(a)cp $$< $$@
 	$$(a)echo '$$(J) $$(C) $$(I)' >> $$@
 	#GEN build/$</$$@
@@ -378,11 +380,13 @@ PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) public/index.html
 ASSETS_DIR := $(shell find pages -mindepth 1 -type d -name assets)
 JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
 CSS    := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.css))
-ICO    := $(foreach d,$(ASSETS_DIR),$(firstword $(wildcard $(d)/favicon.*)))
 PUBLIC_JS  := $(JS:pages/%=public/%)
 PUBLIC_CSS := $(CSS:pages/%=public/%)
-PUBLIC_ICO := $(ICO:pages/%=public/%)
-ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
+
+IMG        := $(shell find pages | grep -E '($(imagesext))$$')
+PUBLIC_IMG := $(IMG:pages/%=public/%)
+
+ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 
 TEMPLATES := layout/default layout/default_tags view/list view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
