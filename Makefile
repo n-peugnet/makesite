@@ -261,14 +261,17 @@ tagspage: tags
 tags.html: tags
 	$$(a)echo '<ul>' > $$@
 	$$(a)cat $$< | while read tag; do \
-		sed "s~{{tag}}~$$$$tag~g" $$(TAG_VIEW) >> $$@; \
+		sed $$(TAG_VIEW) \
+		-e "s~{{tag}}~$$$$tag~g" \
+		-e "s~{{path}}~$$(basepath)/tags/$$$$tag~g" \
+		>> $$@; \
 	done
 	$$(a)echo '</ul>' >> $$@
 	#GEN build/$</$$@
 
 tags: $$(TAGS_FILE)
 ifneq ($$(strip $$(TAGS_FILE)),)
-	$$(a)uniq $$< | sed -e 's~\\s~-~' > $$@
+	$$(a)sort $$< | uniq | sed -e 's~\\s~-~' > $$@
 	#GEN build/$</$$@
 else
 	$$(a)touch $$@
@@ -324,7 +327,9 @@ endef
 
 define DEFAULT_TAGVIEW
 <li>
-	<span class="tag tag-{{tag}}">{{tag}}</span>
+	<span class="tag tag-{{tag}}">
+		<a href="{{path}}">{{tag}}</a>
+	</span>
 </li>
 endef
 
@@ -349,8 +354,13 @@ ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
 TEMPLATES := layout/default view/list view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
 
+ifneq ($(strip $(PAGE_TAGS_LIST)),)
+TAGS := $(shell sed -e 's/\s/-/' -s $(PAGE_TAGS_LIST) | sort | uniq )
+TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
+endif
+
 .PHONY: site
-site: pages build/tags $(TEMPLATES) $(ASSETS) $(PUBLIC_INDEXES)
+site: pages $(TEMPLATES) $(ASSETS) $(TAGS_INDEXES) $(PUBLIC_INDEXES)
 
 pages:
 	$(a)mkdir $@
@@ -362,6 +372,11 @@ $(ASSETS): public/%: pages/%
 	#PUB $@
 
 $(PUBLIC_INDEXES): public/%: build/pages/%
+	$(a)mkdir -p $(@D)
+	$(a)cp $< $@
+	#PUB $@
+
+$(TAGS_INDEXES): public/%/index.html: build/%.html
 	$(a)mkdir -p $(@D)
 	$(a)cp $< $@
 	#PUB $@
@@ -384,8 +399,9 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-build/tags: build/tagspage
-	$(a)cut $< -f1 | uniq > $@
+build/tags/%.html: build/tagspage
+	$(a)mkdir -p $(@D)
+	$(a)grep '^$*	' $< | cut -f2 > $@
 	#GEN $@
 
 build/tagspage: $(BUILD_TAGS_LIST)
@@ -396,7 +412,7 @@ else
 	$(a)touch $@
 endif
 
-$(BUILD_TAGS_LIST): build/pages ;
+$(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
 templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
