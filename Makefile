@@ -152,7 +152,7 @@ TAGS_FILE   := $$(wildcard $$(PAGE_DIR)/tags)
 include $$(CONFIG_FILE)
 
 # default config values
-title       ?= $(shell echo $(notdir $(subst _, ,/$<)) \
+title       ?= $(shell echo $(subst _, ,$(notdir /$<)) \
                        | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
 layout      ?= default.html
 view        ?= list.html
@@ -215,8 +215,8 @@ head.html: ../head.html $$(ASSETS)
 breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
 	$$(a)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
-	$$(a)echo '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
-	           >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR)' >> $$@
+	$$(a)printf '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
+	           >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR) ' >> $$@
 endif
 	#GEN build/$</$$@
 
@@ -245,6 +245,7 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 		-e "s~{{date}}~$$$$date~g" \
 		-e "s~{{description}}~$$$$description~g" \
 		-e "s~{{path}}~$$(basepath)$$$$path~g" \
+		-e "s~{{breadcrumbs}}~~g" \
 		>> $$@; \
 	done
 endif
@@ -258,8 +259,8 @@ metadatas: $$(CONFIG_FILE)
 	$$(a)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
 	#GEN build/$</$$@
 
-tagspage: tags $$(CONFIG_FILE)
-	$$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)~' $$< > $$@
+tagspage: tags breadcrumbs.html $$(CONFIG_FILE)
+	$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t$$(shell cat breadcrumbs.html)~' $$< > $$@
 	#GEN build/$</$$@
 
 tags.html: tags
@@ -351,7 +352,7 @@ endef
 define DEFAULT_LISTVIEW
 <li>
 	<p>
-		<a href="{{path}}">{{title}}</a>
+		{{breadcrumbs}} <a href="{{path}}">{{title}}</a>
 	</p>
 	<p>{{description}}</p>
 </li>
@@ -444,11 +445,13 @@ build/tags/%/pages.html: build/tagspage templates/view/$(view)
 		date=$$(echo "$$tag" | cut -f2); \
 		description=$$(echo "$$tag" | cut -f3); \
 		path=$$(echo "$$tag" | cut -f4); \
+		breadcrumbs=$$(echo "$$tag" | cut -f5); \
 		sed templates/view/$(view) \
 		-e "s~{{title}}~$$title~g" \
 		-e "s~{{date}}~$$date~g" \
 		-e "s~{{description}}~$$description~g" \
 		-e "s~{{path}}~$(basepath)$$path~g" \
+		-e "s~{{breadcrumbs}}~$$breadcrumbs~g" \
 		>> $@; \
 	done
 	$(a)echo '</ul>' >> $@
