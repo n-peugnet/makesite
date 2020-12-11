@@ -63,6 +63,10 @@
 #     layout = custom.html
 #     view = title.html
 
+# It is possible to add tags to a page by adding each of them in a new line of
+# its `tags` file. These tags will replace the `{{tags}}` portion of the layout
+# and provides another way to browser the website.
+
 ################################# Dependencies #################################
 
 # Makesite requires the following programs to be in the PATH:
@@ -140,7 +144,7 @@ export a:=$(if $(debug),,@)
 ################################# SubMakefile ##################################
 
 define SUB_MAKEFILE
-PAGE        := $*/
+PAGE        := $*
 PAGE_DIR    := $$(PREVDIR)/$<
 ROOT_CONFIG := $$(PREVDIR)/config
 CONFIG_FILE := $$(wildcard $$(PAGE_DIR)/config)
@@ -186,16 +190,16 @@ build/$<: index.html metadatas tagspage
 
 index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
             $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
-	$$(a)cat $$(LAYOUT_FILE) \
-	| sed 's~{{sitename}}~$$(sitename)~g' \
-	| sed 's~{{title}}~$$(title)~g' \
-	| sed 's~{{keywords}}~$$(keywords)~g' \
-	| sed 's~{{description}}~$$(description)~g' \
-	| sed -e '/{{head}}/{r head.html' -e 'd}' \
-	| sed -e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
-	| sed -e '/{{tags}}/{r tags.html' -e 'd}' \
-	| sed -e '/{{content}}/{r content.html' -e 'd}' \
-	| sed -e '/{{subpages}}/{r subpages.html' -e 'd}' \
+	$$(a)sed $$(LAYOUT_FILE) \
+	-e 's~{{sitename}}~$$(sitename)~g' \
+	-e 's~{{title}}~$$(title)~g' \
+	-e 's~{{keywords}}~$$(keywords)~g' \
+	-e 's~{{description}}~$$(description)~g' \
+	-e '/{{head}}/{r head.html' -e 'd}' \
+	-e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
+	-e '/{{tags}}/{r tags.html' -e 'd}' \
+	-e '/{{content}}/{r content.html' -e 'd}' \
+	-e '/{{subpages}}/{r subpages.html' -e 'd}' \
 	> $$@
 	#GEN build/$</$$@
 
@@ -236,11 +240,11 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 		date=$$$$(cut -f2 $$$$f); \
 		description=$$$$(cut -f3 $$$$f); \
 		path=$$$$(cut -f4 $$$$f); \
-		cat $$(VIEW_FILE) \
-		| sed "s~{{title}}~$$$$title~g" \
-		| sed "s~{{date}}~$$$$date~g" \
-		| sed "s~{{description}}~$$$$description~g" \
-		| sed "s~{{path}}~$$(basepath)$$$$path~g" \
+		sed $$(VIEW_FILE) \
+		-e "s~{{title}}~$$$$title~g" \
+		-e "s~{{date}}~$$$$date~g" \
+		-e "s~{{description}}~$$$$description~g" \
+		-e "s~{{path}}~$$(basepath)$$$$path~g" \
 		>> $$@; \
 	done
 endif
@@ -254,8 +258,8 @@ metadatas: $$(CONFIG_FILE)
 	$$(a)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
 	#GEN build/$</$$@
 
-tagspage: tags
-	$$(a)sed -e 's~$$$$~\t$$(PAGE)~' $$< > $$@
+tagspage: tags $$(CONFIG_FILE)
+	$$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)~' $$< > $$@
 	#GEN build/$</$$@
 
 tags.html: tags
@@ -282,9 +286,9 @@ endif
 .FORCE:
 endef
 
-############################### Default template ###############################
+################################ Default layout ################################
 
-define DEFAULT_TEMPLATE
+define DEFAULT_LAYOUT
 <!DOCTYPE html>
 <html>
 	<head>
@@ -297,16 +301,46 @@ define DEFAULT_TEMPLATE
 		<meta name="Keywords" content="{{keywords}}"/>
 		<meta name="Description" content="{{description}}"/>
 		{{head}}
+		<style>
+		.tags ul {padding: 0;}
+		.tag {list-style-type: none; display: inline; padding: 2px 5px;\
+		      border-radius: 10px; margin: 2px; background-color: grey;}
+		.tag a {color: white; text-decoration: none;}
+		</style>
 	</head>
 	<body>
 		<section>
-			<p>{{breadcrumbs}}</p>
+			<p>
+				{{breadcrumbs}}
+			</p>
 			<h1>{{title}}</h1>
-			{{tags}}
+			<div class="tags">
+				{{tags}}
+			</div>
 			{{content}}
 		</section>
 		<section>
 			{{subpages}}
+		</section>
+	</body>
+</html>
+endef
+
+################################# Tags layout ##################################
+
+define DEFAULT_TAGLAYOUT
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Tag: {{tag}} - {{sitename}}</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		{{head}}
+	</head>
+	<body>
+		<section>
+			<h1>Tag: {{tag}}</h1>
+			{{pages}}
 		</section>
 	</body>
 </html>
@@ -326,10 +360,8 @@ endef
 ############################### Default tagview ################################
 
 define DEFAULT_TAGVIEW
-<li>
-	<span class="tag tag-{{tag}}">
-		<a href="{{path}}">{{tag}}</a>
-	</span>
+<li class="tag tag-{{tag}}">
+	<a href="{{path}}">{{tag}}</a>
 </li>
 endef
 
@@ -351,7 +383,7 @@ PUBLIC_CSS := $(CSS:pages/%=public/%)
 PUBLIC_ICO := $(ICO:pages/%=public/%)
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_ICO)
 
-TEMPLATES := layout/default view/list view/tag
+TEMPLATES := layout/default layout/default_tags view/list view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
 
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
@@ -376,12 +408,17 @@ $(PUBLIC_INDEXES): public/%: build/pages/%
 	$(a)cp $< $@
 	#PUB $@
 
-$(TAGS_INDEXES): public/%/index.html: build/%.html
+$(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html build/pages/head.html templates/layout/default_tags.html
 	$(a)mkdir -p $(@D)
-	$(a)cp $< $@
+	$(a)sed templates/layout/default_tags.html \
+	-e 's/{{sitename}}/$(sitename)/g' \
+	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
+	-e 's/{{tag}}/$*/g' \
+	-e '/{{pages}}/{r $<' -e 'd}' \
+	> $@
 	#PUB $@
 
-build/%/index.html: build/pages ;
+build/%.html: build/pages ;
 
 .PHONY: build/pages
 build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(TEMPLATES)
@@ -399,9 +436,22 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-build/tags/%.html: build/tagspage
+build/tags/%/pages.html: build/tagspage templates/view/$(view)
 	$(a)mkdir -p $(@D)
-	$(a)grep '^$*	' $< | cut -f2 > $@
+	$(a)echo '<ul>' > $@
+	$(a)sed -n 's~^$*\t\(.*\)~\1~p' $< | while read tag; do \
+		title=$$(echo "$$tag" | cut -f1); \
+		date=$$(echo "$$tag" | cut -f2); \
+		description=$$(echo "$$tag" | cut -f3); \
+		path=$$(echo "$$tag" | cut -f4); \
+		sed templates/view/$(view) \
+		-e "s~{{title}}~$$title~g" \
+		-e "s~{{date}}~$$date~g" \
+		-e "s~{{description}}~$$description~g" \
+		-e "s~{{path}}~$(basepath)$$path~g" \
+		>> $@; \
+	done
+	$(a)echo '</ul>' >> $@
 	#GEN $@
 
 build/tagspage: $(BUILD_TAGS_LIST)
@@ -414,7 +464,8 @@ endif
 
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
 
-templates/layout/default.html: export CONTENT=$(DEFAULT_TEMPLATE)
+templates/layout/default.html: export CONTENT=$(DEFAULT_LAYOUT)
+templates/layout/default_tags.html: export CONTENT=$(DEFAULT_TAGLAYOUT)
 templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
 templates/view/tag.html: export CONTENT=$(DEFAULT_TAGVIEW)
 $(TEMPLATES): Makefile
