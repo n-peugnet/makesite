@@ -36,12 +36,14 @@
 #         └── view                # View files
 
 # In the `pages` directory, *every folder is a page*. Thus a *page's URL is its
-# path*. The content of a page is rendered from every `.md` and `.html` files it
-# contains, to which a list of the subpages is appended.
+# path*. The content of a page is rendered from every `.md` and `.html` and
+# image files it contains, to which a list of the subpages is appended.
 
 # There is only one exception to this principle: each page can have a special
 # `assets` folder. Every `*.js`, `*.css` files and the `favicon.*` it contains
 # are automatically added to the associated page and all of its children.
+# This folder can also be used to store images that wont be automatically
+# included in the content.
 
 # Each page can contain a `config` file to override the default variables. Here
 # is a sample page's `config` file containing all the variables you can define
@@ -186,6 +188,8 @@ ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/assets/favicon.*))
 ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
+IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
+
 # Default target.
 .PHONY: build/$<
 build/$<: index.html metadatas tagspage
@@ -222,13 +226,13 @@ ifneq ($$(strip $$(PARENT)),)
 endif
 	#GEN build/$</$$@
 
-content.html: $$(ALL_HTML)
+content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="%">)
+content.html: $$(ALL_HTML) $$(IMG)
+	$$(a)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
-	$$(a)cat $$^ > $$@
-	#GEN build/$</$$@
-else
-	$$(a)touch $$@
+	$$(a)cat $$(ALL_HTML) >> $$@
 endif
+	#GEN build/$</$$@
 
 %.md.html: $$(PAGE_DIR)/%.md
 	$$(a)cmark $$< > $$@
