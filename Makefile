@@ -177,9 +177,9 @@ SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 			     \! -name assets)
 SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
-LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout).html
-VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view).html
-TAG_VIEW    := $$(PREVDIR)/templates/view/tag.html
+LAYOUT_FILE := $$(PREVDIR)/build/templates/layout/$$(layout).html
+VIEW_FILE   := $$(PREVDIR)/build/templates/view/$$(view).html
+TAG_VIEW    := $$(PREVDIR)/build/templates/view/tag.html
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
 PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
@@ -197,7 +197,7 @@ IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
 .PHONY: build/$<
 build/$<: index.html metadatas tagspage
 
-index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
+index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
 	$$(a)sed $$(LAYOUT_FILE) \
 	-e 's~{{sitename}}~$$(sitename)~' \
@@ -208,7 +208,7 @@ index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
 	-e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
 	-e '/{{tags}}/{r tags.html' -e 'd}' \
 	-e '/{{content}}/{r content.html' -e 'd}' \
-	-e '/{{subpages}}/{r subpages.html' -e 'd}' \
+	-e '/{{pages}}/{r pages.html' -e 'd}' \
 	> $$@
 	#GEN build/$</$$@
 
@@ -241,7 +241,7 @@ endif
 	$$(a)cmark $$< > $$@
 	#MDC build/$</$$@
 
-subpages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
+pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	$$(a)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
 	$$(a)for f in $$(SUBMETADATA); do \
@@ -322,8 +322,7 @@ padding: 2px 5px; background-color: grey; border-radius: 10px;}
 	<body>
 		<section>
 			<p class="breadcrumbs">
-				{{breadcrumbs}}
-				{{title}}
+				{{breadcrumbs}} {{title}}
 			</p>
 			<h1>{{title}}</h1>
 			<div class="tags">
@@ -332,7 +331,7 @@ padding: 2px 5px; background-color: grey; border-radius: 10px;}
 			{{content}}
 		</section>
 		<section>
-			{{subpages}}
+			{{pages}}
 		</section>
 	</body>
 </html>
@@ -381,6 +380,7 @@ endef
 
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
+TPL_LIST       := $(shell find templates -mindepth 1 -type f -name '*.html')
 BUILD_TAGS_LIST:= $(patsubst %,build/%page,$(PAGE_TAGS_LIST))
 BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGE_LIST))
 PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGE_LIST))
@@ -399,7 +399,13 @@ ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 
 TEMPLATES := layout/default layout/default_tags view/full view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
-VIEW_FILE := templates/view/$(view).html
+BUILD_TPL := $(patsubst %,build/%,$(sort $(TEMPLATES) $(TPL_LIST)))
+TAGS_VIEW   := build/templates/view/$(view).html
+TAGS_LAYOUT := build/templates/layout/default_tags.html
+
+# theses are the variables that will be replaced by the content of a file.
+R_VARS     = head breadcrumbs tags content pages
+R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell sed -e 's/\s/-/' -s $(PAGE_TAGS_LIST) | sort | uniq )
@@ -407,7 +413,7 @@ TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 endif
 
 .PHONY: site
-site: pages $(TEMPLATES) $(ASSETS) $(TAGS_INDEXES) $(PUBLIC_INDEXES)
+site: pages $(BUILD_TPL) $(ASSETS) $(TAGS_INDEXES) $(PUBLIC_INDEXES)
 
 pages:
 	$(a)mkdir $@
@@ -425,12 +431,12 @@ $(PUBLIC_INDEXES): public/%: build/pages/%
 
 $(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
 					   build/pages/head.html \
-					   templates/layout/default_tags.html
+					   $(TAGS_LAYOUT)
 	$(a)mkdir -p $(@D)
-	$(a)sed templates/layout/default_tags.html \
+	$(a)sed $(TAGS_LAYOUT) \
 	-e 's/{{sitename}}/$(sitename)/' \
-	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
 	-e 's/{{tag}}/$*/' \
+	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
 	#PUB $@
@@ -453,7 +459,7 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-build/tags/%/pages.html: build/tagspage $(VIEW_FILE)
+build/tags/%/pages.html: build/tagspage $(TAGS_VIEW)
 	$(a)mkdir -p $(@D)
 	$(a)echo '<ul>' > $@
 	$(a)sed -n 's~^$*\t\(.*\)~\1~p' $< | while read tag; do \
@@ -462,7 +468,7 @@ build/tags/%/pages.html: build/tagspage $(VIEW_FILE)
 		description=$$(echo "$$tag" | cut -f3); \
 		path=$$(echo "$$tag" | cut -f4); \
 		breadcrumbs=$$(echo "$$tag" | cut -f5); \
-		sed $(VIEW_FILE) \
+		sed $(TAGS_VIEW) \
 		-e "s~{{title}}~$$title~" \
 		-e "s~{{date}}~$$date~" \
 		-e "s~{{description}}~$$description~" \
@@ -482,6 +488,12 @@ else
 endif
 
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
+
+# sanitize templates to avoid problems later: 
+$(BUILD_TPL): build/%: %
+	$(a)mkdir -p $(@D)
+	$(a)sed $< $(R_VARS_EXP) > $@
+	#SAN $@
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_LAYOUT)
 templates/layout/default_tags.html: export CONTENT=$(DEFAULT_TAGLAYOUT)
