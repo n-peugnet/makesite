@@ -317,8 +317,9 @@ padding: 2px 5px; background-color: grey; border-radius: 10px;}
 	</head>
 	<body>
 		<section>
-			<p>
+			<p class="breadcrumbs">
 				{{breadcrumbs}}
+				{{title}}
 			</p>
 			<h1>{{title}}</h1>
 			<div class="tags">
