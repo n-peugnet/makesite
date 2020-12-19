@@ -200,10 +200,10 @@ build/$<: index.html metadatas tagspage
 index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
 	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
 	$$(a)sed $$(LAYOUT_FILE) \
-	-e 's~{{sitename}}~$$(sitename)~g' \
-	-e 's~{{title}}~$$(title)~g' \
-	-e 's~{{keywords}}~$$(keywords)~g' \
-	-e 's~{{description}}~$$(description)~g' \
+	-e 's~{{sitename}}~$$(sitename)~' \
+	-e 's~{{title}}~$$(title)~' \
+	-e 's~{{keywords}}~$$(keywords)~' \
+	-e 's~{{description}}~$$(description)~' \
 	-e '/{{head}}/{r head.html' -e 'd}' \
 	-e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
 	-e '/{{tags}}/{r tags.html' -e 'd}' \
@@ -250,11 +250,11 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 		description=$$$$(cut -f3 $$$$f); \
 		path=$$$$(cut -f4 $$$$f); \
 		sed $$(VIEW_FILE) \
-		-e "s~{{title}}~$$$$title~g" \
-		-e "s~{{date}}~$$$$date~g" \
-		-e "s~{{description}}~$$$$description~g" \
-		-e "s~{{path}}~$$(basepath)$$$$path~g" \
-		-e "s~{{breadcrumbs}}~~g" \
+		-e "s~{{title}}~$$$$title~" \
+		-e "s~{{date}}~$$$$date~" \
+		-e "s~{{description}}~$$$$description~" \
+		-e "s~{{path}}~$$(basepath)$$$$path~" \
+		-e "s~{{breadcrumbs}}~~" \
 		>> $$@; \
 	done
 endif
@@ -277,8 +277,8 @@ tags.html: tags
 	$$(a)echo '<ul>' > $$@
 	$$(a)cat $$< | while read tag; do \
 		sed $$(TAG_VIEW) \
-		-e "s~{{tag}}~$$$$tag~g" \
-		-e "s~{{path}}~$$(basepath)/tags/$$$$tag~g" \
+		-e "s~{{tag}}~$$$$tag~" \
+		-e "s~{{path}}~$$(basepath)/tags/$$$$tag~" \
 		| tr -d '\\n' >> $$@; \
 	done
 	$$(a)echo '</ul>' >> $$@
@@ -428,9 +428,9 @@ $(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
 					   templates/layout/default_tags.html
 	$(a)mkdir -p $(@D)
 	$(a)sed templates/layout/default_tags.html \
-	-e 's/{{sitename}}/$(sitename)/g' \
+	-e 's/{{sitename}}/$(sitename)/' \
 	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
-	-e 's/{{tag}}/$*/g' \
+	-e 's/{{tag}}/$*/' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
 	#PUB $@
@@ -463,11 +463,11 @@ build/tags/%/pages.html: build/tagspage $(VIEW_FILE)
 		path=$$(echo "$$tag" | cut -f4); \
 		breadcrumbs=$$(echo "$$tag" | cut -f5); \
 		sed $(VIEW_FILE) \
-		-e "s~{{title}}~$$title~g" \
-		-e "s~{{date}}~$$date~g" \
-		-e "s~{{description}}~$$description~g" \
-		-e "s~{{path}}~$(basepath)$$path~g" \
-		-e "s~{{breadcrumbs}}~$$breadcrumbs~g" \
+		-e "s~{{title}}~$$title~" \
+		-e "s~{{date}}~$$date~" \
+		-e "s~{{description}}~$$description~" \
+		-e "s~{{path}}~$(basepath)$$path~" \
+		-e "s~{{breadcrumbs}}~$$breadcrumbs~" \
 		>> $@; \
 	done
 	$(a)echo '</ul>' >> $@
