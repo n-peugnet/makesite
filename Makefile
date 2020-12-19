@@ -176,8 +176,7 @@ PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 			     \! -name assets)
-SUBBUILDS   := $$(SUBPAGES:$$(PAGE_DIR)/%=%)
-SUBMETADATA := $$(SUBBUILDS:%=%/metadatas)
+SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
 LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
 VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view)
 TAG_VIEW    := $$(PREVDIR)/templates/view/tag.html
@@ -242,7 +241,7 @@ endif
 	$$(a)cmark $$< > $$@
 	#MDC build/$</$$@
 
-subpages.html: $$(SUBBUILDS) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
+subpages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	$$(a)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
 	$$(a)for f in $$(SUBMETADATA); do \
@@ -262,8 +261,8 @@ endif
 	$$(a)echo '</ul>' >> $$@
 	#GEN build/$</$$@
 
-$$(SUBBUILDS): head.html breadcrumbs.html metadatas .FORCE
-	$$(a)$$(MAKE) -C $$@
+$$(SUBMETADATA): head.html breadcrumbs.html metadatas .FORCE
+	$$(a)$$(MAKE) -C $$(@D)
 
 metadatas: $$(CONFIG_FILE)
 	$$(a)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
