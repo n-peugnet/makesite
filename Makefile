@@ -50,8 +50,8 @@
 # inside (all of them are optional):
 #
 #     title = Home
-#     layout = default.html
-#     view = list.html
+#     layout = default
+#     view = list
 #     date = 1607360120
 #     keywords = makefile,static-site-generator
 #     description = Home page of the Makesite's website
@@ -62,8 +62,8 @@
 #
 #     sitename = Makesite
 #     basepath = some/sub/folder
-#     layout = custom.html
-#     view = title.html
+#     layout = custom
+#     view = title
 #     imagesext = png|gif
 
 # It is possible to add tags to a page by adding each of them in a new line of
@@ -143,8 +143,8 @@ include config
 # default config values
 export sitename       ?= Makesite
 export basepath       := $(subst //,/,/$(basepath)/)
-export layout         ?= default.html
-export view           ?= list.html
+export layout         ?= default
+export view           ?= full
 export imagesext      ?= png|jpe?g|gif|tiff
 
 export a:=$(if $(debug),,@)
@@ -162,8 +162,8 @@ include $$(CONFIG_FILE)
 # default config values
 title       ?= $(shell echo $(subst _, ,$(notdir /$<)) \
 		       | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
-layout      ?= default.html
-view        ?= list.html
+layout      ?= default
+view        ?= full
 date        ?= $$(shell stat -c %Y $$(PAGE_DIR))
 keywords    ?=
 description ?=
@@ -177,8 +177,8 @@ SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 			     \! -name assets)
 SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
-LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
-VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view)
+LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout).html
+VIEW_FILE   := $$(PREVDIR)/templates/view/$$(view).html
 TAG_VIEW    := $$(PREVDIR)/templates/view/tag.html
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
 PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
@@ -360,7 +360,7 @@ endef
 
 ############################### Default listview ###############################
 
-define DEFAULT_LISTVIEW
+define DEFAULT_FULLVIEW
 <li>
 	<p>
 		{{breadcrumbs}} <a href="{{path}}">{{title}}</a>
@@ -397,8 +397,9 @@ PUBLIC_IMG := $(IMG:pages/%=public/%)
 
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 
-TEMPLATES := layout/default layout/default_tags view/list view/tag
+TEMPLATES := layout/default layout/default_tags view/full view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
+VIEW_FILE := templates/view/$(view).html
 
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell sed -e 's/\s/-/' -s $(PAGE_TAGS_LIST) | sort | uniq )
@@ -452,7 +453,7 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-build/tags/%/pages.html: build/tagspage templates/view/$(view)
+build/tags/%/pages.html: build/tagspage $(VIEW_FILE)
 	$(a)mkdir -p $(@D)
 	$(a)echo '<ul>' > $@
 	$(a)sed -n 's~^$*\t\(.*\)~\1~p' $< | while read tag; do \
@@ -461,7 +462,7 @@ build/tags/%/pages.html: build/tagspage templates/view/$(view)
 		description=$$(echo "$$tag" | cut -f3); \
 		path=$$(echo "$$tag" | cut -f4); \
 		breadcrumbs=$$(echo "$$tag" | cut -f5); \
-		sed templates/view/$(view) \
+		sed $(VIEW_FILE) \
 		-e "s~{{title}}~$$title~g" \
 		-e "s~{{date}}~$$date~g" \
 		-e "s~{{description}}~$$description~g" \
@@ -484,7 +485,7 @@ $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
 
 templates/layout/default.html: export CONTENT=$(DEFAULT_LAYOUT)
 templates/layout/default_tags.html: export CONTENT=$(DEFAULT_TAGLAYOUT)
-templates/view/list.html: export CONTENT=$(DEFAULT_LISTVIEW)
+templates/view/full.html: export CONTENT=$(DEFAULT_FULLVIEW)
 templates/view/tag.html: export CONTENT=$(DEFAULT_TAGVIEW)
 $(TEMPLATES): Makefile
 	$(a)mkdir -p $(@D)
