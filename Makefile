@@ -130,6 +130,10 @@
 
 ################################# Developement #################################
 
+# Code style:
+# - Tab is 8 spaces.
+# - Max width is 80 columns.
+# - configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.
 # Here is a special target to get developers started:
 #
 #     make dev
@@ -157,7 +161,7 @@ include $$(CONFIG_FILE)
 
 # default config values
 title       ?= $(shell echo $(subst _, ,$(notdir /$<)) \
-                       | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
+		       | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
 layout      ?= default.html
 view        ?= list.html
 date        ?= $$(shell stat -c %Y $$(PAGE_DIR))
@@ -171,7 +175,7 @@ PAGESDIR    := $$(PREVDIR)/pages
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
-                             \! -name assets)
+			     \! -name assets)
 SUBBUILDS   := $$(SUBPAGES:$$(PAGE_DIR)/%=%)
 SUBMETADATA := $$(SUBBUILDS:%=%/metadatas)
 LAYOUT_FILE := $$(PREVDIR)/templates/layout/$$(layout)
@@ -195,7 +199,7 @@ IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
 build/$<: index.html metadatas tagspage
 
 index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
-            $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
+	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
 	$$(a)sed $$(LAYOUT_FILE) \
 	-e 's~{{sitename}}~$$(sitename)~g' \
 	-e 's~{{title}}~$$(title)~g' \
@@ -212,7 +216,7 @@ index.html: head.html breadcrumbs.html tags.html content.html subpages.html \
 head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
 head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
 head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
-                                    type="image/$$(ICO_EXT)">)
+				    type="image/$$(ICO_EXT)">)
 head.html: ../head.html | $$(ASSETS)
 	$$(a)cp $$< $$@
 	$$(a)echo '$$(J) $$(C) $$(I)' >> $$@
@@ -222,7 +226,7 @@ breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
 	$$(a)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
 	$$(a)printf '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
-	           >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR) ' >> $$@
+		     >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR) ' >> $$@
 endif
 	#GEN build/$</$$@
 
@@ -266,7 +270,8 @@ metadatas: $$(CONFIG_FILE)
 	#GEN build/$</$$@
 
 tagspage: tags breadcrumbs.html $$(CONFIG_FILE)
-	$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t$$(shell cat breadcrumbs.html)~' $$< > $$@
+	$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\
+		    \t$$(shell cat breadcrumbs.html)~' $$< > $$@
 	#GEN build/$</$$@
 
 tags.html: tags
@@ -418,7 +423,9 @@ $(PUBLIC_INDEXES): public/%: build/pages/%
 	$(a)cp $< $@
 	#PUB $@
 
-$(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html build/pages/head.html templates/layout/default_tags.html
+$(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
+					   build/pages/head.html \
+					   templates/layout/default_tags.html
 	$(a)mkdir -p $(@D)
 	$(a)sed templates/layout/default_tags.html \
 	-e 's/{{sitename}}/$(sitename)/g' \
@@ -508,8 +515,12 @@ siteclean:
 	#RMV public files
 
 .PHONY: dev
-dev: .gitignore
+dev: .gitignore .vscode/settings.json
 	echo debug = 1 >> config
+
+.vscode/settings.json:
+	mkdir -p $(@D)
+	echo '{"editor.rulers": [{ "column": 80 }],"editor.tabSize": 8}' > $@
 
 .gitignore:
 	echo '*' >> $@
