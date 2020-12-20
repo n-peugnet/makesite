@@ -107,7 +107,8 @@
 
 # If you deleted some files from the `pages` directory, then its better to run:
 #
-#     make clean site
+#     make clean
+#     make site
 #
 # This will ensure that the deleted content is removed from your website.
 
@@ -142,7 +143,12 @@
 #
 #     make dev
 
+ifneq ($(word 2,$(MAKECMDGOALS)),)
+$(error cannot run multiple targets at a time)
+endif
+
 include config
+include build/utils.mk
 
 # default config values
 export sitename       ?= Makesite
@@ -157,8 +163,11 @@ export view           ?= full
 export imagesext      ?= png|jpe?g|gif|tiff
 
 # sanitize values
-export domain   := $(patsubst %/,%,$(domain))
-export basepath := $(subst //,/,/$(basepath)/)
+export sitename       := $(call esc,$(sitename))
+export domain         := $(patsubst %/,%,$(domain))
+export basepath       := $(subst //,/,/$(basepath)/)
+export authorname     := $(call esc,$(authorname))
+export authoremail    := $(call esc,$(authoremail))
 
 export a:=$(if $(debug),,@)
 
@@ -168,8 +177,10 @@ define SUB_MAKEFILE
 PAGE        := $*
 PAGE_DIR    := $$(PREVDIR)/$<
 ROOT_CONFIG := $$(PREVDIR)/config
+UTILS_FILE  := $$(PREVDIR)/build/utils.mk
 CONFIG_FILE := $$(wildcard $$(PAGE_DIR)/config)
 TAGS_FILE   := $$(wildcard $$(PAGE_DIR)/tags)
+include $$(UTILS_FILE)
 include $$(CONFIG_FILE)
 
 # default config values
@@ -183,7 +194,9 @@ description ?=
 
 # sanitize values
 date        := @$$(shell date -d '$$(date)' +%s)
-description := $$(strip $$(subst ',,$$(description)))
+title       := $$(call esc,$$(title))
+keywords    := $$(call esc,$$(keywords))
+description := $$(call esc,$$(description))
 
 PAGESDIR    := $$(PREVDIR)/pages
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
@@ -422,6 +435,14 @@ define ATOMENTRY_VIEW
 </entry>
 endef
 
+#################################### Utils #####################################
+
+define UTILS
+define esc
+$$(strip $$(subst ~,\x7e,$$(subst ',\x27,$$1)))
+endef
+endef
+
 ################################ Main Makefile #################################
 
 DATE            = $(shell date --iso-8601=seconds)
@@ -463,7 +484,7 @@ TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
 endif
 
-# build a list of tags with 3 parameters:
+# build a list for a tag with 3 parameters:
 # 1. tag
 # 2. view file
 # 3. destination file
@@ -526,7 +547,7 @@ $(TAGS_FEEDS): public/%: build/%
 build/%.html: build/pages ;
 
 .PHONY: build/pages
-build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL)
+build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) build/utils.mk
 	$(a)$(MAKE) -C $@ PREVDIR=$(CURDIR)
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
@@ -589,7 +610,8 @@ templates/view/full.html: export CONTENT=$(FULL_VIEW)
 templates/view/tag.html: export CONTENT=$(TAG_VIEW)
 build/templates/layout/feed.atom: export CONTENT=$(ATOM_LAYOUT)
 build/templates/view/entry.atom: export CONTENT=$(ATOMENTRY_VIEW)
-$(TEMPLATES) $(ATOM_TPL): Makefile
+build/utils.mk: export CONTENT=$(UTILS)
+$(TEMPLATES) $(ATOM_TPL) build/utils.mk: Makefile
 	$(a)mkdir -p $(@D)
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
