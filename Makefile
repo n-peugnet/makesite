@@ -427,6 +427,7 @@ DATE            = $(shell date --iso-8601=seconds)
 
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
+PAGE_CONF_LIST := $(shell find pages -mindepth 1 -type f -name config)
 TPL_LIST       := $(shell find templates -mindepth 1 -type f -name '*.html')
 BUILD_TAGS_LIST:= $(patsubst %,build/%page,$(PAGE_TAGS_LIST))
 BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGE_LIST))
@@ -554,7 +555,7 @@ else
 	$(a)touch $@
 endif
 
-$(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
+$(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) $(PAGE_CONF_LIST) | build/pages ;
 
 build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 	$(a)sed build/templates/layout/feed.atom \
