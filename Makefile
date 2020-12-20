@@ -61,8 +61,11 @@
 # inside (all of them are optional):
 #
 #     sitename = Makesite
-#     baseurl = https://club1.fr
+#     scheme = https
+#     domain = club1.fr
 #     basepath = some/sub/folder
+#     authorname = nicolas
+#     authoremail = nicolas@club1.fr
 #     layout = custom
 #     view = title
 #     imagesext = png|gif
@@ -143,14 +146,18 @@ include config
 
 # default config values
 export sitename       ?= Makesite
-export baseurl        ?= http://localhost
+export scheme         ?= http
+export domain         ?= localhost
+export baseurl        ?= $(scheme)://$(domain)
 export basepath       ?=
+export authorname     ?= nobody
+export authoremail    ?= $(authorname)@$(domain)
 export layout         ?= page
 export view           ?= full
 export imagesext      ?= png|jpe?g|gif|tiff
 
 # sanitize values
-export baseurl  := $(patsubst %/,%,$(baseurl))
+export domain   := $(patsubst %/,%,$(domain))
 export basepath := $(subst //,/,/$(basepath)/)
 
 export a:=$(if $(debug),,@)
@@ -389,12 +396,12 @@ endef
 define ATOM_LAYOUT
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-	<title>{{title}}</title>
+	<title>{{title}} - {{sitename}}</title>
 	<link href="{{link}}" rel="self" />
 	<link href="{{root}}" />
 	<id>{{id}}</id>
 	<updated>{{date}}</updated>
-	{{entries}}
+	{{pages}}
 </feed>
 endef
 
@@ -403,7 +410,7 @@ endef
 define ATOMENTRY_VIEW
 <entry>
 	<title>{{title}}</title>
-	<link href="{{link}}"/>
+	<link href="{{baseurl}}{{path}}"/>
 	<id>{{id}}</id>
 	<updated>{{date}}</updated>
 	<summary>{{description}}</summary>
@@ -415,6 +422,8 @@ define ATOMENTRY_VIEW
 endef
 
 ################################ Main Makefile #################################
+
+DATE            = $(shell date --iso-8601=minutes)
 
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
@@ -438,6 +447,7 @@ ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 TEMPLATES := layout/page layout/tag view/full view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
 BUILD_TPL := $(patsubst %,build/%,$(sort $(TEMPLATES) $(TPL_LIST)))
+ATOM_TPL  := $(patsubst %,build/templates/%.atom,layout/feed view/entry)
 TAGS_VIEW   := build/templates/view/$(view).html
 TAGS_LAYOUT := build/templates/layout/tag.html
 
@@ -451,8 +461,34 @@ TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
 endif
 
+# build a list of tags with 3 parameters:
+# 1. tag
+# 2. view file
+# 3. destination file
+define tagslist
+sed -n 's~^$1\t\(.*\)~\1~p' build/tagspage | while read tag; do \
+	title=$$(echo "$$tag" | cut -f1); \
+	date=$$(echo "$$tag" | cut -f2 | date --iso-8601=minutes); \
+	description=$$(echo "$$tag" | cut -f3); \
+	path=$$(echo "$$tag" | cut -f4); \
+	breadcrumbs=$$(echo "$$tag" | cut -f5); \
+	sed $2 \
+	-e "s~{{title}}~$$title~" \
+	-e "s~{{date}}~$$date~" \
+	-e "s~{{description}}~$$description~" \
+	-e "s~{{baseurl}}~$(baseurl)~" \
+	-e "s~{{path}}~$(basepath)$$path~" \
+	-e "s~{{id}}~$$path~" \
+	-e "s~{{authorname}}~$(authorname)~" \
+	-e "s~{{authoremail}}~$(authoremail)~" \
+	-e "s~{{breadcrumbs}}~$$breadcrumbs~" \
+	>> $3; \
+done
+endef
+
 .PHONY: site
-site: pages $(BUILD_TPL) $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PUBLIC_INDEXES)
+site: pages $(ATOM_TPL) $(BUILD_TPL) $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) \
+      $(PUBLIC_INDEXES)
 
 pages:
 	$(a)mkdir $@
@@ -473,8 +509,8 @@ $(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
 					   $(TAGS_LAYOUT)
 	$(a)mkdir -p $(@D)
 	$(a)sed $(TAGS_LAYOUT) \
-	-e 's/{{sitename}}/$(sitename)/' \
-	-e 's/{{tag}}/$*/' \
+	-e 's~{{sitename}}~$(sitename)~' \
+	-e 's~{{tag}}~$*~' \
 	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
@@ -503,23 +539,10 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-build/tags/%/pages.html: build/tagspage $(TAGS_VIEW)
+build/tags/%/pages.html: $(TAGS_VIEW) build/tagspage
 	$(a)mkdir -p $(@D)
 	$(a)echo '<ul>' > $@
-	$(a)sed -n 's~^$*\t\(.*\)~\1~p' $< | while read tag; do \
-		title=$$(echo "$$tag" | cut -f1); \
-		date=$$(echo "$$tag" | cut -f2); \
-		description=$$(echo "$$tag" | cut -f3); \
-		path=$$(echo "$$tag" | cut -f4); \
-		breadcrumbs=$$(echo "$$tag" | cut -f5); \
-		sed $(TAGS_VIEW) \
-		-e "s~{{title}}~$$title~" \
-		-e "s~{{date}}~$$date~" \
-		-e "s~{{description}}~$$description~" \
-		-e "s~{{path}}~$(basepath)$$path~" \
-		-e "s~{{breadcrumbs}}~$$breadcrumbs~" \
-		>> $@; \
-	done
+	$(a)$(call tagslist,$*,$<,$@)
 	$(a)echo '</ul>' >> $@
 	#GEN $@
 
@@ -533,9 +556,23 @@ endif
 
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
 
-build/tags/%/feed.atom: export CONTENT=$(ATOM_LAYOUT)
-build/tags/%/feed.atom: Makefile
-	$(a)echo "$$CONTENT" > $@
+build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
+	$(a)sed build/templates/layout/feed.atom \
+	-e 's~{{title}}~Tag: $*~' \
+	-e 's~{{id}}~tag-$*~' \
+	-e 's~{{sitename}}~$(sitename)~' \
+	-e 's~{{link}}~$(baseurl)$(basepath)tags/$*/feed.atom~' \
+	-e 's~{{root}}~$(baseurl)$(basepath)~' \
+	-e 's~{{date}}~$(DATE)~' \
+	-e 's~{{sitename}}~$(sitename)~' \
+	-e '/{{pages}}/{r $<' -e 'd}' \
+	> $@
+	#GEN $@
+
+.PRECIOUS: build/tags/%/pages.atom
+build/tags/%/pages.atom: build/templates/view/entry.atom build/tagspage config
+	$(a)echo > $@
+	$(a)$(call tagslist,$*,$<,$@)
 	#GEN $@
 
 # sanitize templates to avoid problems later: 
@@ -548,7 +585,9 @@ templates/layout/page.html: export CONTENT=$(PAGE_LAYOUT)
 templates/layout/tag.html: export CONTENT=$(TAG_LAYOUT)
 templates/view/full.html: export CONTENT=$(FULL_VIEW)
 templates/view/tag.html: export CONTENT=$(TAG_VIEW)
-$(TEMPLATES): Makefile
+build/templates/layout/feed.atom: export CONTENT=$(ATOM_LAYOUT)
+build/templates/view/entry.atom: export CONTENT=$(ATOMENTRY_VIEW)
+$(TEMPLATES) $(ATOM_TPL): Makefile
 	$(a)mkdir -p $(@D)
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
