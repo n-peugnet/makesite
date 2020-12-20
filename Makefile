@@ -423,7 +423,7 @@ endef
 
 ################################ Main Makefile #################################
 
-DATE            = $(shell date --iso-8601=minutes)
+DATE            = $(shell date --iso-8601=seconds)
 
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
@@ -468,7 +468,7 @@ endif
 define tagslist
 sed -n 's~^$1\t\(.*\)~\1~p' build/tagspage | while read tag; do \
 	title=$$(echo "$$tag" | cut -f1); \
-	date=$$(echo "$$tag" | cut -f2 | date --iso-8601=minutes); \
+	date=$$(echo "$$tag" | cut -f2 | date --iso-8601=seconds); \
 	description=$$(echo "$$tag" | cut -f3); \
 	path=$$(echo "$$tag" | cut -f4); \
 	breadcrumbs=$$(echo "$$tag" | cut -f5); \
