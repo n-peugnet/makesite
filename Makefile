@@ -275,7 +275,7 @@ metadatas: $$(CONFIG_FILE)
 	#GEN build/$</$$@
 
 tagspage: tags breadcrumbs.html $$(CONFIG_FILE)
-	$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\
+	$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
 		    \t$$(shell cat breadcrumbs.html)~' $$< > $$@
 	#GEN build/$</$$@
 
