@@ -487,7 +487,7 @@ done
 endef
 
 .PHONY: site
-site: pages $(ATOM_TPL) $(BUILD_TPL) $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) \
+site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) \
       $(PUBLIC_INDEXES)
 
 pages:
@@ -524,7 +524,7 @@ $(TAGS_FEEDS): public/%: build/%
 build/%.html: build/pages ;
 
 .PHONY: build/pages
-build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(TEMPLATES)
+build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL)
 	$(a)$(MAKE) -C $@ PREVDIR=$(CURDIR)
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
