@@ -421,6 +421,24 @@ define ATOMENTRY_VIEW
 </entry>
 endef
 
+################################# Uuid script ##################################
+
+define UUID_SCRIPT
+#!/bin/bash
+C='89ab'
+for (( N=0; N < 16; ++N ))
+do
+	B=$$(( $$RANDOM%256 ))
+	case $$N in
+	6)       printf '4%x' $$(( B%16 ));;
+	8)       printf '%c%x' $${C:$$RANDOM%$${#C}:1} $$(( B%16 ));;
+	3|5|7|9) printf '%02x-' $$B;;
+	*)       printf '%02x' $$B;;
+	esac
+done
+echo
+endef
+
 ################################ Main Makefile #################################
 
 DATE            = $(shell date --iso-8601=seconds)
@@ -524,7 +542,7 @@ $(TAGS_FEEDS): public/%: build/%
 build/%.html: build/pages ;
 
 .PHONY: build/pages
-build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL)
+build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) build/bin/uuid
 	$(a)$(MAKE) -C $@ PREVDIR=$(CURDIR)
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
@@ -591,6 +609,12 @@ $(TEMPLATES) $(ATOM_TPL): Makefile
 	$(a)mkdir -p $(@D)
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
+
+build/bin/uuid: export CONTENT=$(UUID_SCRIPT)
+build/bin/uuid: Makefile
+	$(a)mkdir -p $(@D)
+	$(a)echo "$$CONTENT" > $@
+	$(a) chmod +x $@
 
 config:
 	$(a)touch $@
