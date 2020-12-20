@@ -50,7 +50,7 @@
 # inside (all of them are optional):
 #
 #     title = Home
-#     layout = default
+#     layout = page
 #     view = list
 #     date = 1607360120
 #     keywords = makefile,static-site-generator
@@ -61,6 +61,7 @@
 # inside (all of them are optional):
 #
 #     sitename = Makesite
+#     baseurl = https://club1.fr
 #     basepath = some/sub/folder
 #     layout = custom
 #     view = title
@@ -142,10 +143,15 @@ include config
 
 # default config values
 export sitename       ?= Makesite
-export basepath       := $(subst //,/,/$(basepath)/)
-export layout         ?= default
+export baseurl        ?= http://localhost
+export basepath       ?=
+export layout         ?= page
 export view           ?= full
 export imagesext      ?= png|jpe?g|gif|tiff
+
+# sanitize values
+export baseurl  := $(patsubst %/,%,$(baseurl))
+export basepath := $(subst //,/,/$(basepath)/)
 
 export a:=$(if $(debug),,@)
 
@@ -162,7 +168,7 @@ include $$(CONFIG_FILE)
 # default config values
 title       ?= $(shell echo $(subst _, ,$(notdir /$<)) \
 		       | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
-layout      ?= default
+layout      ?= page
 view        ?= full
 date        ?= $$(shell stat -c %Y $$(PAGE_DIR))
 keywords    ?=
@@ -297,9 +303,9 @@ endif
 .FORCE:
 endef
 
-################################ Default layout ################################
+################################# Page layout ##################################
 
-define DEFAULT_LAYOUT
+define PAGE_LAYOUT
 <!DOCTYPE html>
 <html>
 	<head>
@@ -315,7 +321,7 @@ define DEFAULT_LAYOUT
 		<style>
 		.tags ul {padding: 0;}
 		.tag {list-style-type: none; display: inline-block; margin:2px;\
-padding: 2px 5px; background-color: grey; border-radius: 10px;}
+padding: 2px 6px; background-color: grey; border-radius: 15px;}
 		.tag a {color: white; text-decoration: none;}
 		</style>
 	</head>
@@ -337,15 +343,17 @@ padding: 2px 5px; background-color: grey; border-radius: 10px;}
 </html>
 endef
 
-################################# Tags layout ##################################
+################################## Tag layout ##################################
 
-define DEFAULT_TAGLAYOUT
+define TAG_LAYOUT
 <!DOCTYPE html>
 <html>
 	<head>
 		<title>Tag: {{tag}} - {{sitename}}</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
+		<link href="feed.atom" title="Tag: {{tag}} Atom feed" \
+		      rel="alternate" type="application/atom+xml" />
 		{{head}}
 	</head>
 	<body>
@@ -357,9 +365,9 @@ define DEFAULT_TAGLAYOUT
 </html>
 endef
 
-############################### Default listview ###############################
+################################## Full view ###################################
 
-define DEFAULT_FULLVIEW
+define FULL_VIEW
 <li>
 	<p>
 		{{breadcrumbs}} <a href="{{path}}">{{title}}</a>
@@ -368,12 +376,42 @@ define DEFAULT_FULLVIEW
 </li>
 endef
 
-############################### Default tagview ################################
+################################### Tag view ###################################
 
-define DEFAULT_TAGVIEW
+define TAG_VIEW
 <li class="tag tag-{{tag}}">
 	<a href="{{path}}">{{tag}}</a>
 </li>
+endef
+
+################################# Atom layout ##################################
+
+define ATOM_LAYOUT
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+	<title>{{title}}</title>
+	<link href="{{link}}" rel="self" />
+	<link href="{{root}}" />
+	<id>{{id}}</id>
+	<updated>{{date}}</updated>
+	{{entries}}
+</feed>
+endef
+
+################################ Atomentry view ################################
+
+define ATOMENTRY_VIEW
+<entry>
+	<title>{{title}}</title>
+	<link href="{{link}}"/>
+	<id>{{id}}</id>
+	<updated>{{date}}</updated>
+	<summary>{{description}}</summary>
+	<author>
+		<name>{{authorname}}</name>
+		<email>{{authoremail}}</email>
+	</author>
+</entry>
 endef
 
 ################################ Main Makefile #################################
@@ -397,11 +435,11 @@ PUBLIC_IMG := $(IMG:pages/%=public/%)
 
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 
-TEMPLATES := layout/default layout/default_tags view/full view/tag
+TEMPLATES := layout/page layout/tag view/full view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
 BUILD_TPL := $(patsubst %,build/%,$(sort $(TEMPLATES) $(TPL_LIST)))
 TAGS_VIEW   := build/templates/view/$(view).html
-TAGS_LAYOUT := build/templates/layout/default_tags.html
+TAGS_LAYOUT := build/templates/layout/tag.html
 
 # theses are the variables that will be replaced by the content of a file.
 R_VARS     = head breadcrumbs tags content pages
@@ -410,10 +448,11 @@ R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell sed -e 's/\s/-/' -s $(PAGE_TAGS_LIST) | sort | uniq )
 TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
+TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
 endif
 
 .PHONY: site
-site: pages $(BUILD_TPL) $(ASSETS) $(TAGS_INDEXES) $(PUBLIC_INDEXES)
+site: pages $(BUILD_TPL) $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PUBLIC_INDEXES)
 
 pages:
 	$(a)mkdir $@
@@ -439,6 +478,11 @@ $(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
 	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
+	#PUB $@
+
+$(TAGS_FEEDS): public/%: build/%
+	$(a)mkdir -p $(@D)
+	$(a)cp $< $@
 	#PUB $@
 
 build/%.html: build/pages ;
@@ -489,16 +533,21 @@ endif
 
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) | build/pages ;
 
+build/tags/%/feed.atom: export CONTENT=$(ATOM_LAYOUT)
+build/tags/%/feed.atom: Makefile
+	$(a)echo "$$CONTENT" > $@
+	#GEN $@
+
 # sanitize templates to avoid problems later: 
 $(BUILD_TPL): build/%: %
 	$(a)mkdir -p $(@D)
 	$(a)sed $< $(R_VARS_EXP) > $@
 	#SAN $@
 
-templates/layout/default.html: export CONTENT=$(DEFAULT_LAYOUT)
-templates/layout/default_tags.html: export CONTENT=$(DEFAULT_TAGLAYOUT)
-templates/view/full.html: export CONTENT=$(DEFAULT_FULLVIEW)
-templates/view/tag.html: export CONTENT=$(DEFAULT_TAGVIEW)
+templates/layout/page.html: export CONTENT=$(PAGE_LAYOUT)
+templates/layout/tag.html: export CONTENT=$(TAG_LAYOUT)
+templates/view/full.html: export CONTENT=$(FULL_VIEW)
+templates/view/tag.html: export CONTENT=$(TAG_VIEW)
 $(TEMPLATES): Makefile
 	$(a)mkdir -p $(@D)
 	$(a)echo "$$CONTENT" > $@
