@@ -177,11 +177,12 @@ title       ?= $(shell echo $(subst _, ,$(notdir /$<)) \
 		       | awk '{$$1=toupper(substr($$1,0,1))substr($$1,2)}1')
 layout      ?= page
 view        ?= full
-date        ?= $$(shell stat -c %Y $$(PAGE_DIR))
+date        ?= @$$(shell stat -c %Y $$(PAGE_DIR))
 keywords    ?=
 description ?=
 
 # sanitize values
+date        := @$$(shell date -d '$$(date)' +%s)
 description := $$(strip $$(subst ',,$$(description)))
 
 PAGESDIR    := $$(PREVDIR)/pages
@@ -469,7 +470,7 @@ endif
 define tagslist
 sed -n 's~^$1\t\(.*\)~\1~p' build/tagspage | while read tag; do \
 	title=$$(echo "$$tag" | cut -f1); \
-	date=$$(echo "$$tag" | cut -f2 | date --iso-8601=seconds); \
+	date=$$(echo "$$tag" | cut -f2 | xargs date --iso-8601=seconds -d); \
 	description=$$(echo "$$tag" | cut -f3); \
 	path=$$(echo "$$tag" | cut -f4); \
 	breadcrumbs=$$(echo "$$tag" | cut -f5); \
