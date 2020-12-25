@@ -314,8 +314,8 @@ tags.html: tags
 
 tags: $$(TAGS_FILE)
 ifneq ($$(strip $$(TAGS_FILE)),)
-	$$(a)sort $$< | uniq | sed -e 's~\\s~-~' > $$@
-	#GEN build/$</$$@
+	$$(a)$$(call slugify,$$(TAGS_FILE)) > $$@
+	#SAN build/$</$$@
 else
 	$$(a)touch $$@
 endif
@@ -440,7 +440,12 @@ endef
 
 define UTILS
 define esc
-$$(strip $$(subst $$$$,\x24,$$(subst ~,\x7e,$$(subst ',\x27,$$1))))
+$$(strip $$(subst $$$$,\x24,$$(subst ~,\x7e,$$(subst ",\22,$$(subst ',\x27,\
+   $$1)))))
+endef
+define slugify
+sort $$1 | iconv -c -t ascii//TRANSLIT | sed -E 's/[~^]+//g' | sed -E \
+'s/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$$$$//g' | tr A-Z a-z | uniq
 endef
 endef
 
@@ -480,7 +485,7 @@ R_VARS     = head breadcrumbs tags content pages
 R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
-TAGS := $(shell sed -e 's/\s/-/' -s $(PAGE_TAGS_LIST) | sort | uniq )
+TAGS := $(shell $(call slugify,$(PAGE_TAGS_LIST)))
 TAGS_META    := $(TAGS:%=build/tags/%/metadatas)
 TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
