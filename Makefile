@@ -490,7 +490,7 @@ endif
 # 2. view file
 # 3. destination file
 define tagslist
-sed -n 's~^$1\t\(.*\)~\1~p' build/tagspage | while read tag; do \
+grep -n '^$1	' build/tagspage | cut -f2- | while read -r tag; do \
 	title=$$(echo "$$tag" | cut -f1); \
 	date=$$(echo "$$tag" | cut -f2 | xargs date --iso-8601=seconds -d); \
 	description=$$(echo "$$tag" | cut -f3); \
