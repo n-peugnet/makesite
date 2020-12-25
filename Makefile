@@ -481,6 +481,7 @@ R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell sed -e 's/\s/-/' -s $(PAGE_TAGS_LIST) | sort | uniq )
+TAGS_META    := $(TAGS:%=build/tags/%/metadatas)
 TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
 endif
@@ -490,7 +491,7 @@ endif
 # 2. view file
 # 3. destination file
 define tagslist
-grep -n '^$1	' build/tagspage | cut -f2- | while read -r tag; do \
+cat build/tags/$1/metadatas | while read -r tag; do \
 	title=$$(echo "$$tag" | cut -f1); \
 	date=$$(echo "$$tag" | cut -f2 | xargs date --iso-8601=seconds -d); \
 	description=$$(echo "$$tag" | cut -f3); \
@@ -563,19 +564,27 @@ build/pages/%/Makefile: pages/% Makefile
 	$(a)echo "$$CONTENT" > $@
 	#GEN $@
 
-build/tags/%/pages.html: $(TAGS_VIEW) build/tagspage
+build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadatas
 	$(a)mkdir -p $(@D)
 	$(a)echo '<ul>' > $@
 	$(a)$(call tagslist,$*,$<,$@)
 	$(a)echo '</ul>' >> $@
 	#GEN $@
 
-build/tagspage: $(BUILD_TAGS_LIST)
-ifneq ($$(strip $$(BUILD_TAGS_LIST)),)
-	$(a)cat $(BUILD_TAGS_LIST) > $@
-	#GEN $@
-else
-	$(a)touch $@
+$(TAGS_META): build/tags ;
+
+.PHONY: build/tags
+build/tags: $(BUILD_TAGS_LIST) | build/pages
+ifneq ($(strip $(BUILD_TAGS_LIST)),)
+	$(a)mkdir -p $@
+	$(a)cat $(BUILD_TAGS_LIST) > $@/metadatas
+	$(a)for t in `cut -f1 $@/metadatas | sort | uniq`; do \
+		mkdir -p $@/$$t; \
+		sed -n "s~^$$t\t\(.*\)~\1~p" $@/metadatas \
+		> $@/$$t/metadatas.new; \
+		cmp --silent $@/$$t/metadatas $@/$$t/metadatas.new \
+		|| cp $@/$$t/metadatas.new $@/$$t/metadatas; \
+	done
 endif
 
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) $(PAGE_CONF_LIST) | build/pages ;
@@ -594,7 +603,8 @@ build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 	#GEN $@
 
 .PRECIOUS: build/tags/%/pages.atom
-build/tags/%/pages.atom: build/templates/view/entry.atom build/tagspage config
+build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadatas\
+			 config
 	$(a)echo > $@
 	$(a)$(call tagslist,$*,$<,$@)
 	#GEN $@
