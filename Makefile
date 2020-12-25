@@ -89,7 +89,7 @@
 # Download the latest version of this file in an empty directory and run it:
 #
 #     wget https://github.com/n-peugnet/makesite/raw/master/Makefile
-#     make site
+#     make
 #
 # This will create the base directory structure detailled above and the first
 # page of your website: `index.html` in the `public` directory. To browse the
@@ -97,7 +97,7 @@
 # To add content to the home page you can add an `.html` file in the `pages`
 # folder then run once again:
 #
-#     make site
+#     make
 
 # You can also add new directories in `pages` to create new pages.
 # Makesite will automatically add links in the parent page and breadcrumbs to
@@ -108,7 +108,7 @@
 # If you deleted some files from the `pages` directory, then its better to run:
 #
 #     make clean
-#     make site
+#     make
 #
 # This will ensure that the deleted content is removed from your website.
 
@@ -129,8 +129,8 @@
 # - The ` ` character is not allowed in any file or folder name (and the use
 #   of any special character is strongly discouraged). Instead you can use the
 #   character `_` which will be converted to space in the default title.
-# - The `~` character is not allowed in `config` files, as it is the one used
-#   for sed in Makesite.
+# - The `$` character must be written `$$` in `config` files not to be
+#   interpreted as a variable in Makesite.
 # - The name `assets` is reserved and cannot be used as a page name.
 
 ################################# Developement #################################
@@ -296,8 +296,9 @@ metadatas: $$(CONFIG_FILE)
 	#GEN build/$</$$@
 
 tagspage: tags breadcrumbs.html $$(CONFIG_FILE)
-	$(a)sed -e 's~$$$$~\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
-		    \t$$(shell cat breadcrumbs.html)~' $$< > $$@
+	$(a)cat $$< | xargs -I % echo \
+		%'\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
+		  \t$$(shell cat breadcrumbs.html)' > $$@
 	#GEN build/$</$$@
 
 tags.html: tags
@@ -439,7 +440,7 @@ endef
 
 define UTILS
 define esc
-$$(strip $$(subst ~,\x7e,$$(subst ',\x27,$$1)))
+$$(strip $$(subst $$$$,\x24,$$(subst ~,\x7e,$$(subst ',\x27,$$1))))
 endef
 endef
 
