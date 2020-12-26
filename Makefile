@@ -74,6 +74,7 @@
 # It is possible to add tags to a page by adding each of them in a new line of
 # its `tags` file. These tags will replace the `{{tags}}` portion of the layout
 # and provides another way to browser the website.
+# An atom/rss feed is generated for each tag and made autodiscoverable.
 
 ################################# Dependencies #################################
 
