@@ -237,6 +237,7 @@ index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
 	-e 's~{{keywords}}~$$(keywords)~' \
+	-e 's~{{date}}~$$(shell date --rfc-3339=seconds -d $$(date))~' \
 	-e 's~{{description}}~$$(description)~' \
 	-e '/{{head}}/{r head.html' -e 'd}' \
 	-e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
@@ -360,6 +361,7 @@ padding: 2px 6px; background-color: grey; border-radius: 15px;}
 				{{breadcrumbs}} {{title}}
 			</p>
 			<h1>{{title}}</h1>
+			<p class="date">{{date}}</p>
 			<div class="tags">
 				{{tags}}
 			</div>
