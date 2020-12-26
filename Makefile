@@ -161,6 +161,7 @@ export authoremail    ?= $(authorname)@$(domain)
 export layout         ?= page
 export view           ?= full
 export imagesext      ?= png|jpe?g|gif|tiff
+export loglevel       ?= info # trace|debug|info|error
 
 # sanitize values
 export sitename       := $(call esc,$(sitename))
@@ -169,7 +170,10 @@ export basepath       := $(subst //,/,/$(basepath)/)
 export authorname     := $(call esc,$(authorname))
 export authoremail    := $(call esc,$(authoremail))
 
-export a:=$(if $(debug),,@)
+export l0:=$(if $(filter trace,$(loglevel)),,@)            # trace
+export l1:=$(if $(filter trace debug,$(loglevel)),,@)      # debug
+export l2:=$(if $(filter trace debug info,$(loglevel)),,@) # info
+MAKEFLAGS+=$(if $(filter trace debug,$(loglevel)),, --no-print-directory)
 
 ################################# SubMakefile ##################################
 
@@ -223,10 +227,13 @@ IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
 # Default target.
 .PHONY: build/$<
 build/$<: index.html metadatas tagspage
+ifeq ($(l2),@)
+	@:
+endif
 
 index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
-	$$(a)sed $$(LAYOUT_FILE) \
+	$$(l0)sed $$(LAYOUT_FILE) \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
 	-e 's~{{keywords}}~$$(keywords)~' \
@@ -237,41 +244,41 @@ index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	-e '/{{content}}/{r content.html' -e 'd}' \
 	-e '/{{pages}}/{r pages.html' -e 'd}' \
 	> $$@
-	#GEN build/$</$$@
+	$$(l1)#GEN build/$</$$@
 
 head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
 head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
 head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
 				    type="image/$$(ICO_EXT)">)
 head.html: ../head.html | $$(ASSETS)
-	$$(a)cp $$< $$@
-	$$(a)echo '$$(J) $$(C) $$(I)' >> $$@
-	#GEN build/$</$$@
+	$$(l0)cp $$< $$@
+	$$(l0)echo '$$(J) $$(C) $$(I)' >> $$@
+	$$(l1)#GEN build/$</$$@
 
 breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
-	$$(a)cp $$< $$@
+	$$(l0)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
-	$$(a)printf '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
+	$$(l0)printf '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
 		     >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR) ' >> $$@
 endif
-	#GEN build/$</$$@
+	$$(l1)#GEN build/$</$$@
 
 content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="%">)
 content.html: $$(ALL_HTML) $$(IMG)
-	$$(a)echo '$$I' > $$@
+	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
-	$$(a)cat $$(ALL_HTML) >> $$@
+	$$(l0)cat $$(ALL_HTML) >> $$@
 endif
-	#GEN build/$</$$@
+	$$(l1)#GEN build/$</$$@
 
 %.md.html: $$(PAGE_DIR)/%.md
-	$$(a)cmark $$< > $$@
-	#MDC build/$</$$@
+	$$(l0)cmark $$< > $$@
+	$$(l1)#MDC build/$</$$@
 
 pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
-	$$(a)echo '<ul>' > $$@
+	$$(l0)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
-	$$(a)for f in $$(SUBMETADATA); do \
+	$$(l0)for f in $$(SUBMETADATA); do \
 		title=$$$$(cut -f1 $$$$f); \
 		date=$$$$(cut -f2 $$$$f); \
 		description=$$$$(cut -f3 $$$$f); \
@@ -285,43 +292,43 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 		>> $$@; \
 	done
 endif
-	$$(a)echo '</ul>' >> $$@
-	#GEN build/$</$$@
+	$$(l0)echo '</ul>' >> $$@
+	$$(l1)#GEN build/$</$$@
 
 $$(SUBMETADATA): head.html breadcrumbs.html metadatas .FORCE
-	$$(a)$$(MAKE) -C $$(@D)
+	$$(l0)$$(MAKE) -C $$(@D)
 
 metadatas: $$(CONFIG_FILE)
-	$$(a)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
-	#GEN build/$</$$@
+	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
+	$$(l1)#GEN build/$</$$@
 
 tagspage: tags breadcrumbs.html $$(CONFIG_FILE)
-	$(a)cat $$< | xargs -I % echo \
+	$$(l0)cat $$< | xargs -I % echo \
 		%'\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
 		  \t$$(shell cat breadcrumbs.html)' > $$@
-	#GEN build/$</$$@
+	$$(l1)#GEN build/$</$$@
 
 tags.html: tags
-	$$(a)echo '<ul>' > $$@
-	$$(a)cat $$< | while read tag; do \
+	$$(l0)echo '<ul>' > $$@
+	$$(l0)cat $$< | while read tag; do \
 		sed $$(TAG_VIEW) \
 		-e "s~{{tag}}~$$$$tag~" \
 		-e "s~{{path}}~$$(basepath)/tags/$$$$tag~" \
 		| tr -d '\\n' >> $$@; \
 	done
-	$$(a)echo '</ul>' >> $$@
-	#GEN build/$</$$@
+	$$(l0)echo '</ul>' >> $$@
+	$$(l1)#GEN build/$</$$@
 
 tags: $$(TAGS_FILE)
 ifneq ($$(strip $$(TAGS_FILE)),)
-	$$(a)$$(call slugify,$$(TAGS_FILE)) > $$@
-	#SAN build/$</$$@
+	$$(l0)$$(call slugify,$$(TAGS_FILE)) > $$@
+	$$(l1)#SAN build/$</$$@
 else
-	$$(a)touch $$@
+	$$(l0)touch $$@
 endif
 
 ../head.html ../breadcrumbs.html:
-	$$(a)touch $$@
+	$$(l0)touch $$@
 .FORCE:
 endef
 
@@ -521,69 +528,69 @@ site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) \
       $(PUBLIC_INDEXES)
 
 pages:
-	$(a)mkdir $@
-	#CREA $@ directory
+	$(l0)mkdir $@
+	$(l2)#CREA $@ directory
 
 $(ASSETS): public/%: pages/%
-	$(a)mkdir -p $(@D)
-	$(a)cp $< $@
-	#PUB $@
+	$(l0)mkdir -p $(@D)
+	$(l0)cp $< $@
+	$(l2)#PUB $@
 
 $(PUBLIC_INDEXES): public/%: build/pages/%
-	$(a)mkdir -p $(@D)
-	$(a)cp $< $@
-	#PUB $@
+	$(l0)mkdir -p $(@D)
+	$(l0)cp $< $@
+	$(l2)#PUB $@
 
 $(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
 					   build/pages/head.html \
 					   $(TAGS_LAYOUT)
-	$(a)mkdir -p $(@D)
-	$(a)sed $(TAGS_LAYOUT) \
+	$(l0)mkdir -p $(@D)
+	$(l0)sed $(TAGS_LAYOUT) \
 	-e 's~{{sitename}}~$(sitename)~' \
 	-e 's~{{tag}}~$*~' \
 	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
-	#PUB $@
+	$(l2)#PUB $@
 
 $(TAGS_FEEDS): public/%: build/%
-	$(a)mkdir -p $(@D)
-	$(a)cp $< $@
-	#PUB $@
+	$(l0)mkdir -p $(@D)
+	$(l0)cp $< $@
+	$(l2)#PUB $@
 
 build/%.html: build/pages ;
 
 .PHONY: build/pages
 build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) build/utils.mk
-	$(a)$(MAKE) -C $@ PREVDIR=$(CURDIR)
+	$(l0)$(MAKE) -C $@ PREVDIR=$(CURDIR)
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/Makefile: pages Makefile
-	$(a)mkdir -p $(@D)
-	$(a)echo "$$CONTENT" > $@
-	#GEN $@
+	$(l0)mkdir -p $(@D)
+	$(l0)echo "$$CONTENT" > $@
+	$(l1)#GEN $@
 
 build/pages/%/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/%/Makefile: pages/% Makefile
-	$(a)mkdir -p $(@D)
-	$(a)echo "$$CONTENT" > $@
-	#GEN $@
+	$(l0)mkdir -p $(@D)
+	$(l0)echo "$$CONTENT" > $@
+	$(l1)#GEN $@
 
 build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadatas
-	$(a)mkdir -p $(@D)
-	$(a)echo '<ul>' > $@
-	$(a)$(call tagslist,$*,$<,$@)
-	$(a)echo '</ul>' >> $@
-	#GEN $@
+	$(l0)mkdir -p $(@D)
+	$(l0)echo '<ul>' > $@
+	$(l0)$(call tagslist,$*,$<,$@)
+	$(l0)echo '</ul>' >> $@
+	$(l1)#GEN $@
 
 $(TAGS_META): build/tags ;
 
 .PHONY: build/tags
 build/tags: $(BUILD_TAGS_LIST) | build/pages
 ifneq ($(strip $(BUILD_TAGS_LIST)),)
-	$(a)mkdir -p $@
-	$(a)cat $(BUILD_TAGS_LIST) > $@/metadatas
-	$(a)for t in `cut -f1 $@/metadatas | sort | uniq`; do \
+	$(l0)mkdir -p $@
+	$(l0)cat $(BUILD_TAGS_LIST) > $@/metadatas
+	$(l0)for t in `cut -f1 $@/metadatas | sort | uniq`; do \
 		mkdir -p $@/$$t; \
 		sed -n "s~^$$t\t\(.*\)~\1~p" $@/metadatas \
 		> $@/$$t/metadatas.new; \
@@ -595,7 +602,7 @@ endif
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) $(PAGE_CONF_LIST) | build/pages ;
 
 build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
-	$(a)sed build/templates/layout/feed.atom \
+	$(l0)sed build/templates/layout/feed.atom \
 	-e 's~{{title}}~Tag: $*~' \
 	-e 's~{{id}}~tag-$*~' \
 	-e 's~{{sitename}}~$(sitename)~' \
@@ -605,20 +612,20 @@ build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 	-e 's~{{sitename}}~$(sitename)~' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
-	#GEN $@
+	$(l1)#GEN $@
 
 .PRECIOUS: build/tags/%/pages.atom
 build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadatas\
 			 config
-	$(a)echo > $@
-	$(a)$(call tagslist,$*,$<,$@)
-	#GEN $@
+	$(l0)echo > $@
+	$(l0)$(call tagslist,$*,$<,$@)
+	$(l1)#GEN $@
 
 # sanitize templates to avoid problems later: 
 $(BUILD_TPL): build/%: %
-	$(a)mkdir -p $(@D)
-	$(a)sed $< $(R_VARS_EXP) > $@
-	#SAN $@
+	$(l0)mkdir -p $(@D)
+	$(l0)sed $< $(R_VARS_EXP) > $@
+	$(l1)#SAN $@
 
 templates/layout/page.html: export CONTENT=$(PAGE_LAYOUT)
 templates/layout/tag.html: export CONTENT=$(TAG_LAYOUT)
@@ -628,35 +635,35 @@ build/templates/layout/feed.atom: export CONTENT=$(ATOM_LAYOUT)
 build/templates/view/entry.atom: export CONTENT=$(ATOMENTRY_VIEW)
 build/utils.mk: export CONTENT=$(UTILS)
 $(TEMPLATES) $(ATOM_TPL) build/utils.mk: Makefile
-	$(a)mkdir -p $(@D)
-	$(a)echo "$$CONTENT" > $@
-	#GEN $@
+	$(l0)mkdir -p $(@D)
+	$(l0)echo "$$CONTENT" > $@
+	$(l1)#GEN $@
 
 config:
-	$(a)touch $@
-	#CREA $@
+	$(l0)touch $@
+	$(l2)#CREA $@
 
 .PHONY: clean
 clean: siteclean buildclean templatesclean
 
 .PHONY: buildclean
 buildclean:
-	$(a)rm -rf build
-	#RMV build files
+	$(l0)rm -rf build
+	$(l2)#RMV build files
 
 .PHONY: templatesclean
 templatesclean:
-	$(a)rm -rf $(TEMPLATES)
-	#RMV template files
+	$(l0)rm -rf $(TEMPLATES)
+	$(l2)#RMV template files
 
 .PHONY: siteclean
 siteclean:
-	$(a)rm -rf public
-	#RMV public files
+	$(l0)rm -rf public
+	$(l2)#RMV public files
 
 .PHONY: dev
 dev: .gitignore .vscode/settings.json
-	echo debug = 1 >> config
+	echo loglevel = trace >> config
 
 .vscode/settings.json:
 	mkdir -p $(@D)
