@@ -285,7 +285,7 @@ pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 ifneq ($$(strip $$(SUBMETADATA)),)
 	$$(l0)for f in $$(SUBMETADATA); do \
 		title=$$$$(cut -f1 $$$$f); \
-		date=$$$$(cut -f2 $$$$f); \
+		date=$$$$(date +'$$(dateformat)' -d $$$$(cut -f2 $$$$f)); \
 		description=$$$$(cut -f3 $$$$f); \
 		path=$$$$(cut -f4 $$$$f); \
 		sed $$(VIEW_FILE) \
@@ -406,8 +406,9 @@ define FULL_VIEW
 <li>
 	<p>
 		{{breadcrumbs}} <a href="{{path}}">{{title}}</a>
+		<span class="date">{{date}}</span>
 	</p>
-	<p>{{description}}</p>
+	<p class="description">{{description}}</p>
 </li>
 endef
 
@@ -508,10 +509,11 @@ endif
 # 1. tag
 # 2. view file
 # 3. destination file
+# 4. date format
 define tagslist
 cat build/tags/$1/metadatas | while read -r tag; do \
 	title=$$(echo "$$tag" | cut -f1); \
-	date=$$(echo "$$tag" | cut -f2 | xargs date --iso-8601=seconds -d); \
+	date=$$(echo "$$tag" | cut -f2 | xargs date +'$4' -d); \
 	description=$$(echo "$$tag" | cut -f3); \
 	path=$$(echo "$$tag" | cut -f4); \
 	breadcrumbs=$$(echo "$$tag" | cut -f5); \
@@ -585,7 +587,7 @@ build/pages/%/Makefile: pages/% Makefile
 build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadatas
 	$(l0)mkdir -p $(@D)
 	$(l0)echo '<ul>' > $@
-	$(l0)$(call tagslist,$*,$<,$@)
+	$(l0)$(call tagslist,$*,$<,$@,$(dateformat))
 	$(l0)echo '</ul>' >> $@
 	$(l1)#GEN $@
 
@@ -624,7 +626,7 @@ build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadatas\
 			 config
 	$(l0)echo > $@
-	$(l0)$(call tagslist,$*,$<,$@)
+	$(l0)$(call tagslist,$*,$<,$@,%FT%T%z)
 	$(l1)#GEN $@
 
 # sanitize templates to avoid problems later: 
