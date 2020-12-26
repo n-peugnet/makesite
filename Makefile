@@ -68,6 +68,7 @@
 #     authoremail = nicolas@club1.fr
 #     layout = custom
 #     view = title
+#     dateformat = %d/%m/%y
 #     imagesext = png|gif
 
 # It is possible to add tags to a page by adding each of them in a new line of
@@ -160,15 +161,16 @@ export authorname     ?= nobody
 export authoremail    ?= $(authorname)@$(domain)
 export layout         ?= page
 export view           ?= full
+export dateformat     ?= %FT%T%z # ISO 8601
 export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
 
 # sanitize values
-export sitename       := $(call esc,$(sitename))
-export domain         := $(patsubst %/,%,$(domain))
-export basepath       := $(subst //,/,/$(basepath)/)
-export authorname     := $(call esc,$(authorname))
-export authoremail    := $(call esc,$(authoremail))
+export sitename       :=$(call esc,$(sitename))
+export domain         :=$(patsubst %/,%,$(domain))
+export basepath       :=$(subst //,/,/$(basepath)/)
+export authorname     :=$(call esc,$(authorname))
+export authoremail    :=$(call esc,$(authoremail))
 
 export l0:=$(if $(filter trace,$(loglevel)),,@)            # trace
 export l1:=$(if $(filter trace debug,$(loglevel)),,@)      # debug
@@ -197,10 +199,11 @@ keywords    ?=
 description ?=
 
 # sanitize values
-date        := @$$(shell date -d '$$(date)' +%s)
-title       := $$(call esc,$$(title))
-keywords    := $$(call esc,$$(keywords))
-description := $$(call esc,$$(description))
+date        :=@$$(shell date -d '$$(date)' +%s)
+title       :=$$(call esc,$$(title))
+keywords    :=$$(call esc,$$(keywords))
+description :=$$(call esc,$$(description))
+dateformat  :=$$(strip $$(dateformat))
 
 PAGESDIR    := $$(PREVDIR)/pages
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
@@ -237,7 +240,7 @@ index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
 	-e 's~{{keywords}}~$$(keywords)~' \
-	-e 's~{{date}}~$$(shell date --rfc-3339=seconds -d $$(date))~' \
+	-e 's~{{date}}~$$(shell date -d $$(date) +'$$(dateformat)')~' \
 	-e 's~{{description}}~$$(description)~' \
 	-e '/{{head}}/{r head.html' -e 'd}' \
 	-e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
