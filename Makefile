@@ -169,7 +169,7 @@ export loglevel       ?= info # trace|debug|info|error
 # sanitize values
 export sitename       :=$(call esc,$(sitename))
 export domain         :=$(patsubst %/,%,$(domain))
-export basepath       :=$(subst //,/,/$(basepath)/)
+export basepath       :=$(subst //,/,$(subst //,/,/$(basepath)/))
 export authorname     :=$(call esc,$(authorname))
 export authoremail    :=$(call esc,$(authoremail))
 
@@ -263,7 +263,7 @@ head.html: ../head.html | $$(ASSETS)
 breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
 	$$(l0)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
-	$$(l0)printf '<a href="$$(subst //,/,/$$(basepath)$$(PARENT))"\
+	$$(l0)printf '<a href="$$(subst //,/,$$(basepath)$$(PARENT))"\
 		     >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR) ' >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
@@ -318,7 +318,7 @@ tags.html: tags
 	$$(l0)cat $$< | while read tag; do \
 		sed $$(TAG_VIEW) \
 		-e "s~{{tag}}~$$$$tag~" \
-		-e "s~{{path}}~$$(basepath)/tags/$$$$tag~" \
+		-e "s~{{path}}~$$(basepath)tags/$$$$tag~" \
 		| tr -d '\\n' >> $$@; \
 	done
 	$$(l0)echo '</ul>' >> $$@
