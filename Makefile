@@ -168,8 +168,8 @@ export loglevel       ?= info # trace|debug|info|error
 
 # sanitize values
 export sitename       :=$(call esc,$(sitename))
-export domain         :=$(patsubst %/,%,$(domain))
-export basepath       :=$(subst //,/,$(subst //,/,/$(basepath)/))
+export domain         :=$(subst /,,$(domain))
+export basepath       :=$(subst //,/,$(abspath $(basepath))/)
 export authorname     :=$(call esc,$(authorname))
 export authoremail    :=$(call esc,$(authoremail))
 
