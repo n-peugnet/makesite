@@ -55,6 +55,7 @@
 #     date = 1607360120
 #     keywords = makefile,static-site-generator
 #     description = Home page of the Makesite's website
+#     sort = date/desc
 
 # There is a "root `config` file" at the same level as this file that contains
 # the website's global configuration. Here are the variables that can be set
@@ -198,6 +199,7 @@ view        ?= full
 date        ?= @$$(shell stat -c %Y $$(PAGE_DIR))
 keywords    ?=
 description ?=
+sort        ?= title/asc
 
 # sanitize values
 date        :=@$$(shell date -d '$$(date)' +%s)
@@ -212,6 +214,8 @@ SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 			     \! -name assets)
 SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
+SORT_FIELD  := $$(subst /,,$$(dir $$(sort)))
+SORT_ORDER  := $$(notdir $$(sort))
 LAYOUT_FILE := $$(PREVDIR)/build/templates/layout/$$(layout).html
 VIEW_FILE   := $$(PREVDIR)/build/templates/view/$$(view).html
 TAG_VIEW    := $$(PREVDIR)/build/templates/view/tag.html
@@ -227,6 +231,15 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
+
+ifeq ($$(SORT_FIELD),title)
+SORT_FLAGS = -k1
+else ifeq ($$(SORT_FIELD),date)
+SORT_FLAGS = -k2
+endif
+ifeq ($$(SORT_ORDER),desc)
+SORT_FLAGS += -r
+endif
 
 # Default target.
 .PHONY: build/$<
@@ -283,11 +296,12 @@ endif
 pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	$$(l0)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
-	$$(l0)for f in $$(SUBMETADATA); do \
-		title=$$$$(cut -f1 $$$$f); \
-		date=$$$$(date +'$$(dateformat)' -d $$$$(cut -f2 $$$$f)); \
-		description=$$$$(cut -f3 $$$$f); \
-		path=$$$$(cut -f4 $$$$f); \
+	$$(l0)cat $$(SUBMETADATA) | sort $$(SORT_FLAGS) | while read -r l; do \
+		title=`echo "$$$$l" | cut -f1`; \
+		timestamp=`echo "$$$$l" | cut -f2`; \
+		description=`echo "$$$$l" | cut -f3`; \
+		path=`echo "$$$$l" | cut -f4`; \
+		date=`date +'$$(dateformat)' -d $$$$timestamp`; \
 		sed $$(VIEW_FILE) \
 		-e "s~{{title}}~$$$$title~" \
 		-e "s~{{date}}~$$$$date~" \
