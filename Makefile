@@ -244,7 +244,7 @@ endif
 # Default target.
 .PHONY: build/$<
 build/$<: index.html metadatas tagspage
-ifeq ($(l2),@)
+ifeq ($$(strip $$(l1)),@)
 	@:
 endif
 
