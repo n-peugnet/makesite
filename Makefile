@@ -202,7 +202,7 @@ description ?=
 sort        ?= title/asc
 
 # sanitize values
-date        :=@$$(shell date -d '$$(date)' +%s)
+date        :=$$(shell date -d '$$(date)' +%s)
 title       :=$$(call esc,$$(title))
 keywords    :=$$(call esc,$$(keywords))
 description :=$$(call esc,$$(description))
@@ -235,11 +235,12 @@ IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
 ifeq ($$(SORT_FIELD),title)
 SORT_FLAGS = -k1
 else ifeq ($$(SORT_FIELD),date)
-SORT_FLAGS = -k2
+SORT_FLAGS = -k2 -n
 endif
 ifeq ($$(SORT_ORDER),desc)
 SORT_FLAGS += -r
 endif
+SORT_FLAGS += -t'\t'
 
 # Default target.
 .PHONY: build/$<
@@ -254,7 +255,7 @@ index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
 	-e 's~{{keywords}}~$$(keywords)~' \
-	-e 's~{{date}}~$$(shell date -d $$(date) +'$$(dateformat)')~' \
+	-e 's~{{date}}~$$(shell date -d @$$(date) +'$$(dateformat)')~' \
 	-e 's~{{description}}~$$(description)~' \
 	-e '/{{head}}/{r head.html' -e 'd}' \
 	-e '/{{breadcrumbs}}/{r breadcrumbs.html' -e 'd}' \
@@ -301,7 +302,7 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 		timestamp=`echo "$$$$l" | cut -f2`; \
 		description=`echo "$$$$l" | cut -f3`; \
 		path=`echo "$$$$l" | cut -f4`; \
-		date=`date +'$$(dateformat)' -d $$$$timestamp`; \
+		date=`date +'$$(dateformat)' -d @$$$$timestamp`; \
 		sed $$(VIEW_FILE) \
 		-e "s~{{title}}~$$$$title~" \
 		-e "s~{{date}}~$$$$date~" \
@@ -525,12 +526,13 @@ endif
 # 3. destination file
 # 4. date format
 define tagslist
-cat build/tags/$1/metadatas | while read -r tag; do \
-	title=$$(echo "$$tag" | cut -f1); \
-	date=$$(echo "$$tag" | cut -f2 | xargs date +'$4' -d); \
-	description=$$(echo "$$tag" | cut -f3); \
-	path=$$(echo "$$tag" | cut -f4); \
-	breadcrumbs=$$(echo "$$tag" | cut -f5); \
+cat build/tags/$1/metadatas | sort -k2 -nr -t'	' | while read -r tag; do \
+	title=`echo "$$tag" | cut -f1`; \
+	timestamp=`echo "$$tag" | cut -f2`; \
+	description=`echo "$$tag" | cut -f3`; \
+	path=`echo "$$tag" | cut -f4`; \
+	breadcrumbs=`echo "$$tag" | cut -f5`; \
+	date=`date +'$4' -d @$$timestamp`; \
 	sed $2 \
 	-e "s~{{title}}~$$title~" \
 	-e "s~{{date}}~$$date~" \
