@@ -163,7 +163,7 @@ export authorname     ?= nobody
 export authoremail    ?= $(authorname)@$(domain)
 export layout         ?= page
 export view           ?= full
-export dateformat     ?= %FT%T%z # ISO 8601
+export dateformat     ?= %FT%T%:z # ISO 8601
 export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
 
@@ -462,6 +462,9 @@ define ATOMENTRY_VIEW
 		<name>{{authorname}}</name>
 		<email>{{authoremail}}</email>
 	</author>
+	<content>
+		{{content}}
+	</content>
 </entry>
 endef
 
@@ -539,10 +542,11 @@ cat build/tags/$1/metadatas | sort -k2 -nr -t'	' | while read -r tag; do \
 	-e "s~{{description}}~$$description~" \
 	-e "s~{{baseurl}}~$(baseurl)~" \
 	-e "s~{{path}}~$(basepath)$$path~" \
-	-e "s~{{id}}~$$path~" \
+	-e "s~{{id}}~$(baseurl)$(basepath)$$path~" \
 	-e "s~{{authorname}}~$(authorname)~" \
 	-e "s~{{authoremail}}~$(authoremail)~" \
 	-e "s~{{breadcrumbs}}~$$breadcrumbs~" \
+	-e "/{{content}}/{r build/pages/$$path/content.html" -e 'd}' \
 	>> $3; \
 done
 endef
@@ -628,7 +632,7 @@ $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) $(PAGE_CONF_LIST) | build/pages ;
 build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 	$(l0)sed build/templates/layout/feed.atom \
 	-e 's~{{title}}~Tag: $*~' \
-	-e 's~{{id}}~tag-$*~' \
+	-e 's~{{id}}~$(baseurl)$(basepath)tags/$*~' \
 	-e 's~{{sitename}}~$(sitename)~' \
 	-e 's~{{link}}~$(baseurl)$(basepath)tags/$*/feed.atom~' \
 	-e 's~{{root}}~$(baseurl)$(basepath)~' \
@@ -642,7 +646,7 @@ build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadatas\
 			 config
 	$(l0)echo > $@
-	$(l0)$(call tagslist,$*,$<,$@,%FT%T%z)
+	$(l0)$(call tagslist,$*,$<,$@,%FT%T%:z)
 	$(l1)#GEN $@
 
 # sanitize templates to avoid problems later: 
