@@ -462,8 +462,10 @@ define ATOMENTRY_VIEW
 		<name>{{authorname}}</name>
 		<email>{{authoremail}}</email>
 	</author>
-	<content>
-		{{content}}
+	<content type="xhtml">
+		<div xmlns="http://www.w3.org/1999/xhtml">
+			{{content}}
+		</div>
 	</content>
 </entry>
 endef
