@@ -178,14 +178,15 @@ export l0:=$(if $(filter trace,$(loglevel)),,@)            # trace
 export l1:=$(if $(filter trace debug,$(loglevel)),,@)      # debug
 export l2:=$(if $(filter trace debug info,$(loglevel)),,@) # info
 MAKEFLAGS+=$(if $(filter trace debug,$(loglevel)),, --no-print-directory)
+export ROOT=$(CURDIR)
 
 ################################# SubMakefile ##################################
 
 define SUB_MAKEFILE
 PAGE        := $*
-PAGE_DIR    := $$(PREVDIR)/$<
-ROOT_CONFIG := $$(PREVDIR)/config
-UTILS_FILE  := $$(PREVDIR)/build/utils.mk
+PAGE_DIR    := $$(ROOT)/$<
+ROOT_CONFIG := $$(ROOT)/config
+UTILS_FILE  := $$(ROOT)/build/utils.mk
 CONFIG_FILE := $$(wildcard $$(PAGE_DIR)/config)
 TAGS_FILE   := $$(wildcard $$(PAGE_DIR)/tags)
 include $$(UTILS_FILE)
@@ -208,7 +209,7 @@ keywords    :=$$(call esc,$$(keywords))
 description :=$$(call esc,$$(description))
 dateformat  :=$$(strip $$(dateformat))
 
-PAGESDIR    := $$(PREVDIR)/pages
+PAGESDIR    := $$(ROOT)/pages
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
@@ -216,9 +217,9 @@ SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
 SORT_FIELD  := $$(subst /,,$$(dir $$(sort)))
 SORT_ORDER  := $$(notdir $$(sort))
-LAYOUT_FILE := $$(PREVDIR)/build/templates/layout/$$(layout).html
-VIEW_FILE   := $$(PREVDIR)/build/templates/view/$$(view).html
-TAG_VIEW    := $$(PREVDIR)/build/templates/view/tag.html
+LAYOUT_FILE := $$(ROOT)/build/templates/layout/$$(layout).html
+VIEW_FILE   := $$(ROOT)/build/templates/view/$$(view).html
+TAG_VIEW    := $$(ROOT)/build/templates/view/tag.html
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
 PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
@@ -240,7 +241,6 @@ endif
 ifeq ($$(SORT_ORDER),desc)
 SORT_FLAGS += -r
 endif
-SORT_FLAGS += -t'\t'
 
 # Default target.
 .PHONY: build/$<
@@ -297,20 +297,8 @@ endif
 pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
 	$$(l0)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
-	$$(l0)cat $$(SUBMETADATA) | sort $$(SORT_FLAGS) | while read -r l; do \
-		title=`echo "$$$$l" | cut -f1`; \
-		timestamp=`echo "$$$$l" | cut -f2`; \
-		description=`echo "$$$$l" | cut -f3`; \
-		path=`echo "$$$$l" | cut -f4`; \
-		date=`date +'$$(dateformat)' -d @$$$$timestamp`; \
-		sed $$(VIEW_FILE) \
-		-e "s~{{title}}~$$$$title~" \
-		-e "s~{{date}}~$$$$date~" \
-		-e "s~{{description}}~$$$$description~" \
-		-e "s~{{path}}~$$(basepath)$$$$path~" \
-		-e "s~{{breadcrumbs}}~~" \
-		>> $$@; \
-	done
+	$$(l0)$$(call pages,$$(SUBMETADATA),$$(VIEW_FILE),$$@,$$(dateformat), \
+		      $$(SORT_FLAGS))
 endif
 	$$(l0)echo '</ul>' >> $$@
 	$$(l1)#GEN build/$</$$@
@@ -319,7 +307,7 @@ $$(SUBMETADATA): head.html breadcrumbs.html metadatas .FORCE
 	$$(l0)$$(MAKE) -C $$(@D)
 
 metadatas: $$(CONFIG_FILE)
-	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
+	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t\t' > $$@
 	$$(l1)#GEN build/$</$$@
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
@@ -425,6 +413,9 @@ define FULL_VIEW
 		<span class="date">{{date}}</span>
 	</p>
 	<p class="description">{{description}}</p>
+	<article class="content">
+		{{content}}
+	</article>
 </li>
 endef
 
@@ -482,6 +473,34 @@ define slugify
 sort $$1 | iconv -c -t ascii//TRANSLIT | sed -E 's/[~^]+//g' | sed -E \
 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$$$$//g' | tr A-Z a-z | uniq
 endef
+# render a list of pages based on:
+# 1. metadatas file
+# 2. view file
+# 3. destination file
+# 4. date format
+# 5. sort flags
+define pages
+cat $$1 | sort $$5 -t'\t' | while read -r tag; do \
+	title=`echo "$$$$tag" | cut -f1`; \
+	timestamp=`echo "$$$$tag" | cut -f2`; \
+	description=`echo "$$$$tag" | cut -f3`; \
+	path=`echo "$$$$tag" | cut -f4`; \
+	breadcrumbs=`echo "$$$$tag" | cut -f5`; \
+	date=`date +'$$4' -d @$$$$timestamp`; \
+	sed $$2 \
+	-e "s~{{title}}~$$$$title~" \
+	-e "s~{{date}}~$$$$date~" \
+	-e "s~{{description}}~$$$$description~" \
+	-e "s~{{baseurl}}~$$(baseurl)~" \
+	-e "s~{{path}}~$$(basepath)$$$$path~" \
+	-e "s~{{id}}~$$(baseurl)$$(basepath)$$$$path~" \
+	-e "s~{{authorname}}~$$(authorname)~" \
+	-e "s~{{authoremail}}~$$(authoremail)~" \
+	-e "s~{{breadcrumbs}}~$$$$breadcrumbs~" \
+	-e "/{{content}}/{r $$(ROOT)/build/pages/$$$$path/content.html" -e 'd}'\
+	>> $$3; \
+done
+endef
 endef
 
 ################################ Main Makefile #################################
@@ -526,33 +545,6 @@ TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
 endif
 
-# build a list for a tag with 3 parameters:
-# 1. tag
-# 2. view file
-# 3. destination file
-# 4. date format
-define tagslist
-cat build/tags/$1/metadatas | sort -k2 -nr -t'	' | while read -r tag; do \
-	title=`echo "$$tag" | cut -f1`; \
-	timestamp=`echo "$$tag" | cut -f2`; \
-	description=`echo "$$tag" | cut -f3`; \
-	path=`echo "$$tag" | cut -f4`; \
-	breadcrumbs=`echo "$$tag" | cut -f5`; \
-	date=`date +'$4' -d @$$timestamp`; \
-	sed $2 \
-	-e "s~{{title}}~$$title~" \
-	-e "s~{{date}}~$$date~" \
-	-e "s~{{description}}~$$description~" \
-	-e "s~{{baseurl}}~$(baseurl)~" \
-	-e "s~{{path}}~$(basepath)$$path~" \
-	-e "s~{{id}}~$(baseurl)$(basepath)$$path~" \
-	-e "s~{{authorname}}~$(authorname)~" \
-	-e "s~{{authoremail}}~$(authoremail)~" \
-	-e "s~{{breadcrumbs}}~$$breadcrumbs~" \
-	-e "/{{content}}/{r build/pages/$$path/content.html" -e 'd}' \
-	>> $3; \
-done
-endef
 
 .PHONY: site
 site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) \
@@ -593,7 +585,7 @@ build/%.html: build/pages ;
 
 .PHONY: build/pages
 build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) build/utils.mk
-	$(l0)$(MAKE) -C $@ PREVDIR=$(CURDIR)
+	$(l0)$(MAKE) -C $@
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
 build/pages/Makefile: pages Makefile
@@ -610,7 +602,7 @@ build/pages/%/Makefile: pages/% Makefile
 build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadatas
 	$(l0)mkdir -p $(@D)
 	$(l0)echo '<ul>' > $@
-	$(l0)$(call tagslist,$*,$<,$@,$(dateformat))
+	$(l0)$(call pages,build/tags/$*/metadatas,$<,$@,$(dateformat),-nrk2)
 	$(l0)echo '</ul>' >> $@
 	$(l1)#GEN $@
 
@@ -649,7 +641,7 @@ build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadatas\
 			 config
 	$(l0)echo > $@
-	$(l0)$(call tagslist,$*,$<,$@,%FT%T%:z)
+	$(l0)$(call pages,build/tags/$*/metadatas,$<,$@,%FT%T%:z,-nrk2)
 	$(l1)#GEN $@
 
 # sanitize templates to avoid problems later: 
