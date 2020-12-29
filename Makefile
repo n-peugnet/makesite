@@ -322,10 +322,11 @@ metadatas: $$(CONFIG_FILE)
 	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)' > $$@
 	$$(l1)#GEN build/$</$$@
 
-tagspage: tags breadcrumbs.html $$(CONFIG_FILE)
+tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 	$$(l0)cat $$< | xargs -I % echo \
 		%'\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
-		  \t$$(shell cat breadcrumbs.html)' > $$@
+		  \t$$(shell cat breadcrumbs.html)$\
+		  \t$$(shell stat -c %Y content.html)' > $$@
 	$$(l1)#GEN build/$</$$@
 
 tags.html: tags
