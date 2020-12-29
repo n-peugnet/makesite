@@ -282,7 +282,7 @@ ifneq ($$(strip $$(PARENT)),)
 endif
 	$$(l1)#GEN build/$</$$@
 
-content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="%">)
+content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="%"/>)
 content.html: $$(ALL_HTML) $$(IMG)
 	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
