@@ -56,6 +56,7 @@
 #     keywords = makefile,static-site-generator
 #     description = Home page of the Makesite's website
 #     sort = date/desc
+#     feed = 1
 
 # There is a "root `config` file" at the same level as this file that contains
 # the website's global configuration. Here are the variables that can be set
@@ -201,6 +202,7 @@ date        ?= @$$(shell stat -c %Y $$(PAGE_DIR))
 keywords    ?=
 description ?=
 sort        ?= title/asc
+feed        ?=
 
 # sanitize values
 date        :=$$(shell date -d '$$(date)' +%s)
@@ -218,9 +220,10 @@ SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
 SORT_FIELD  := $$(subst /,,$$(dir $$(sort)))
 SORT_ORDER  := $$(notdir $$(sort))
-LAYOUT_FILE := $$(ROOT)/build/templates/layout/$$(layout).html
-VIEW_FILE   := $$(ROOT)/build/templates/view/$$(view).html
-TAG_VIEW    := $$(ROOT)/build/templates/view/tag.html
+TPL_DIR     := $$(ROOT)/build/templates
+LAYOUT_FILE := $$(TPL_DIR)/layout/$$(layout).html
+VIEW_FILE   := $$(TPL_DIR)/view/$$(view).html
+TAG_VIEW    := $$(TPL_DIR)/view/tag.html
 PAGE_HTML   := $$(wildcard $$(PAGE_DIR)/*.html)
 PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
@@ -233,6 +236,9 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
+ifeq ($$(strip $$(feed)),1)
+OTHER += feed.atom
+endif
 
 ifeq ($$(SORT_FIELD),title)
 SORT_FLAGS = -k1
@@ -245,7 +251,7 @@ endif
 
 # Default target.
 .PHONY: build/$<
-build/$<: index.html metadatas tagspage
+build/$<: index.html metadatas tagspage $$(OTHER)
 ifeq ($$(strip $$(l1)),@)
 	@:
 endif
@@ -270,9 +276,13 @@ head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
 head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
 head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
 				    type="image/$$(ICO_EXT)">)
-head.html: ../head.html | $$(ASSETS)
+head.html: ../head.html $$(CONFIG_FILE) | $$(ASSETS)
 	$$(l0)cp $$< $$@
 	$$(l0)echo '$$(J) $$(C) $$(I)' >> $$@
+ifeq ($$(strip $$(feed)),1)
+	$$(l0)echo '<link href="feed.atom" title="$$(title) Atom feed" \
+			  rel="alternate" type="application/atom+xml" />' >> $$@
+endif
 	$$(l1)#GEN build/$</$$@
 
 breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
@@ -305,6 +315,18 @@ ifneq ($$(strip $$(SUBMETADATA)),)
 endif
 	$$(l0)echo '</ul>' >> $$@
 	$$(l1)#GEN build/$</$$@
+
+ifeq ($$(strip $$(feed)),1)
+feed.atom: pages.atom $$(TPL_DIR)/layout/feed.atom
+	$$(l0)$$(call atomfeed,$$(PAGE),$$<,$$@,$$(title))
+	$$(l1)#GEN $@
+
+pages.atom: $$(TPL_DIR)/view/entry.atom $$(SUBMETADATA) \
+			 $$(ROOT_CONFIG)
+	$$(l0)echo > $$@
+	$$(l0)$$(call pages,$$(SUBMETADATA),$$<,$$@,%FT%T%:z,-nrk2)
+	$$(l1)#GEN $@
+endif
 
 $$(SUBMETADATA): head.html breadcrumbs.html metadatas .FORCE
 	$$(l0)$$(MAKE) -C $$(@D)
@@ -504,11 +526,28 @@ cat $$1 | sort $$5 -t'\t' | while read -r tag; do \
 	>> $$3; \
 done
 endef
+# generate a feed based on:
+# 1. the directory of the feed
+# 2. the page entries file
+# 3. the destination file
+# 4. the title of the feed
+define atomfeed
+sed $$(ROOT)/build/templates/layout/feed.atom \
+-e 's~{{title}}~$$4~' \
+-e 's~{{id}}~$$(baseurl)$$(basepath)$$1~' \
+-e 's~{{sitename}}~$$(sitename)~' \
+-e 's~{{link}}~$$(baseurl)$$(basepath)$$1feed.atom~' \
+-e 's~{{root}}~$$(baseurl)$$(basepath)~' \
+-e 's~{{date}}~$$(DATE)~' \
+-e 's~{{sitename}}~$$(sitename)~' \
+-e '/{{pages}}/{r $$2' -e 'd}' \
+> $$3
+endef
 endef
 
 ################################ Main Makefile #################################
 
-DATE            = $(shell date --iso-8601=seconds)
+export DATE     = $(shell date --iso-8601=seconds)
 
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
@@ -548,9 +587,11 @@ TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
 endif
 
+PAGE_FEED_LIST := $(shell grep -rlE 'feed ?= ?1' pages --include config)
+PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=public/%/feed.atom)
 
 .PHONY: site
-site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) \
+site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PAGE_FEEDS)\
       $(PUBLIC_INDEXES)
 
 pages:
@@ -562,7 +603,7 @@ $(ASSETS): public/%: pages/%
 	$(l0)cp $< $@
 	$(l2)#PUB $@
 
-$(PUBLIC_INDEXES): public/%: build/pages/%
+$(PUBLIC_INDEXES) $(PAGE_FEEDS): public/%: build/pages/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
@@ -584,7 +625,7 @@ $(TAGS_FEEDS): public/%: build/%
 	$(l0)cp $< $@
 	$(l2)#PUB $@
 
-build/%.html: build/pages ;
+build/pages/%: build/pages ;
 
 .PHONY: build/pages
 build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) build/utils.mk
@@ -628,16 +669,7 @@ endif
 $(BUILD_TAGS_LIST): $(PAGE_TAGS_LIST) $(PAGE_CONF_LIST) | build/pages ;
 
 build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
-	$(l0)sed build/templates/layout/feed.atom \
-	-e 's~{{title}}~Tag: $*~' \
-	-e 's~{{id}}~$(baseurl)$(basepath)tags/$*~' \
-	-e 's~{{sitename}}~$(sitename)~' \
-	-e 's~{{link}}~$(baseurl)$(basepath)tags/$*/feed.atom~' \
-	-e 's~{{root}}~$(baseurl)$(basepath)~' \
-	-e 's~{{date}}~$(DATE)~' \
-	-e 's~{{sitename}}~$(sitename)~' \
-	-e '/{{pages}}/{r $<' -e 'd}' \
-	> $@
+	$(l0)$(call atomfeed,tags/$*/,$<,$@,Tag: $*)
 	$(l1)#GEN $@
 
 .PRECIOUS: build/tags/%/pages.atom
