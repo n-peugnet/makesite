@@ -74,7 +74,7 @@
 
 # It is possible to add tags to a page by adding each of them in a new line of
 # its `tags` file. These tags will replace the `{{tags}}` portion of the layout
-# and provides another way to browser the website.
+# and provides another way to browse the website.
 # An atom/rss feed is generated for each tag and made autodiscoverable.
 
 ################################# Dependencies #################################
@@ -134,14 +134,14 @@
 #   character `_` which will be converted to space in the default title.
 # - The `$` character must be written `$$` in `config` files not to be
 #   interpreted as a variable in Makesite.
-# - The name `assets` is reserved and cannot be used as a page name.
+# - Relative path in content (images,links,...) must start with `./` or `../`.
 
 ################################# Developement #################################
 
 # Code style:
 # - Tab is 8 spaces.
 # - Max width is 80 columns.
-# - configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.
+# - Configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.
 # Here is a special target to get developers started:
 #
 #     make dev
@@ -170,7 +170,7 @@ export loglevel       ?= info # trace|debug|info|error
 # sanitize values
 export sitename       :=$(call esc,$(sitename))
 export domain         :=$(subst /,,$(domain))
-export basepath       :=$(subst //,/,$(abspath $(basepath))/)
+export basepath       :=$(subst //,/,/$(basepath)/)
 export authorname     :=$(call esc,$(authorname))
 export authoremail    :=$(call esc,$(authoremail))
 
@@ -210,6 +210,7 @@ description :=$$(call esc,$$(description))
 dateformat  :=$$(strip $$(dateformat))
 
 PAGESDIR    := $$(ROOT)/pages
+PAGE_PATH    = $$(subst //,/,$$(basepath)$$(PAGE)/)
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
@@ -286,7 +287,9 @@ content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="%"/>)
 content.html: $$(ALL_HTML) $$(IMG)
 	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
-	$$(l0)cat $$(ALL_HTML) >> $$@
+	$$(l0)cat $$(ALL_HTML) \
+	      | sed -E 's~(src|href)="(\.[^"]*)"~\\1="$$(PAGE_PATH)\\2"~g' \
+	      >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
 
