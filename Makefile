@@ -628,7 +628,8 @@ $(TAGS_FEEDS): public/%: build/%
 build/pages/%: build/pages ;
 
 .PHONY: build/pages
-build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) build/utils.mk
+build/pages: build/pages/Makefile $(BUILD_MK_LIST) $(BUILD_TPL) $(ATOM_TPL) \
+	     build/utils.mk
 	$(l0)$(MAKE) -C $@
 
 build/pages/Makefile: export CONTENT=$(SUB_MAKEFILE)
