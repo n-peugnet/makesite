@@ -280,7 +280,7 @@ head.html: ../head.html $$(CONFIG_FILE) | $$(ASSETS)
 	$$(l0)cp $$< $$@
 	$$(l0)echo '$$(J) $$(C) $$(I)' >> $$@
 ifeq ($$(strip $$(feed)),1)
-	$$(l0)echo '<link href="feed.atom" title="$$(title) Atom feed" \
+	$$(l0)echo '<link href="$$(PAGE_PATH)feed.atom" title="$$(title) feed" \
 			  rel="alternate" type="application/atom+xml" />' >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
