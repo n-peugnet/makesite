@@ -56,9 +56,9 @@
 #     date        = 2021-04-12                          # (dir mtime)
 #     keywords    = makefile,static-site-generator
 #     description = Home page of the Makesite's website
-#     sort = date/desc                                  # title/asc
-#     feed = 1
-#     cover = assets/image.jpg                          # assets/cover.*
+#     sort        = date/desc                           # title/asc
+#     feed        = 1
+#     cover       = assets/image.jpg                    # assets/cover.*
 
 # There is a "root `config` file" at the same level as this file that contains
 # the website's global configuration. Here are the variables that can be set
@@ -240,8 +240,8 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
-COVER = $$(call esc,$$(if $$(cover),<img class="cover" alt="[cover picture]" \
-	src="$$(PAGE_PATH)$$(cover)" />,))
+COVER = $$(if $$(cover),$$(call esc,<img class="cover" alt="[cover picture]" \
+	src="$$(PAGE_PATH)$$(cover)" />),)
 
 ifeq ($$(strip $$(feed)),1)
 OTHER += feed.atom
