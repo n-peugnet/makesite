@@ -240,7 +240,7 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
-COVER = $$(call esc,$$(if $$(cover),<img class="cover" alt="[$$(PAGE) cover]" \
+COVER = $$(call esc,$$(if $$(cover),<img class="cover" alt="[cover picture]" \
 	src="$$(PAGE_PATH)$$(cover)" />,))
 
 ifeq ($$(strip $$(feed)),1)
