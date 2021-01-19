@@ -1,6 +1,6 @@
 # Makesite
 
-# Copyright (C) 2020  Nicolas Peugnet
+# Copyright (c) 2020-2021  Nicolas Peugnet
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -49,14 +49,16 @@
 # is a sample page's `config` file containing all the variables you can define
 # inside (all of them are optional):
 #
-#     title = Home
-#     layout = page
-#     view = list
-#     date = 1607360120
-#     keywords = makefile,static-site-generator
+#     # var         example                               default
+#     title       = Home                                # (capitalized dir name)
+#     layout      = page                                # (root layout)
+#     view        = list                                # (root view)
+#     date        = 2021-04-12                          # (dir mtime)
+#     keywords    = makefile,static-site-generator
 #     description = Home page of the Makesite's website
-#     sort = date/desc
+#     sort = date/desc                                  # title/asc
 #     feed = 1
+#     cover = assets/image.jpg                          # assets/cover.*
 
 # There is a "root `config` file" at the same level as this file that contains
 # the website's global configuration. Here are the variables that can be set
@@ -203,6 +205,7 @@ keywords    ?=
 description ?=
 sort        ?= title/asc
 feed        ?=
+cover       ?= $$(wildcard $$(PAGE_DIR)/assets/cover.*)
 
 # sanitize values
 date        :=$$(shell date -d '$$(date)' +%s)
@@ -210,6 +213,7 @@ title       :=$$(call esc,$$(title))
 keywords    :=$$(call esc,$$(keywords))
 description :=$$(call esc,$$(description))
 dateformat  :=$$(strip $$(dateformat))
+cover       :=$$(cover:$$(PAGE_DIR)/%=%)
 
 PAGESDIR    := $$(ROOT)/pages
 PAGE_PATH    = $$(subst //,/,$$(basepath)$$(PAGE)/)
@@ -236,6 +240,9 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
+COVER = $$(call esc,$$(if $$(cover),<img class="cover" alt="[$$(PAGE) cover]" \
+	src="$$(PAGE_PATH)$$(cover)" />,))
+
 ifeq ($$(strip $$(feed)),1)
 OTHER += feed.atom
 endif
@@ -261,6 +268,7 @@ index.html: head.html breadcrumbs.html tags.html content.html pages.html \
 	$$(l0)sed $$(LAYOUT_FILE) \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
+	-e 's~{{cover}}~$$(COVER)~' \
 	-e 's~{{keywords}}~$$(keywords)~' \
 	-e 's~{{date}}~$$(shell date -d @$$(date) +'$$(dateformat)')~' \
 	-e 's~{{description}}~$$(description)~' \
@@ -293,7 +301,7 @@ ifneq ($$(strip $$(PARENT)),)
 endif
 	$$(l1)#GEN build/$</$$@
 
-content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="%"/>)
+content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="[auto]"/>)
 content.html: $$(ALL_HTML) $$(IMG)
 	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
@@ -332,13 +340,15 @@ $$(SUBMETADATA): head.html breadcrumbs.html metadatas .FORCE
 	$$(l0)$$(MAKE) -C $$(@D)
 
 metadatas: $$(CONFIG_FILE)
-	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t\t' > $$@
+	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t\t$\
+		    $$(COVER)' > $$@
 	$$(l1)#GEN build/$</$$@
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
+# The last column is only there to generate a diff in build/tags
 	$$(l0)cat $$< | xargs -I % echo \
 		%'\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
-		  \t$$(shell cat breadcrumbs.html)$\
+		  \t$$(shell cat breadcrumbs.html)\t$$(COVER)$\
 		  \t$$(shell stat -c %Y content.html)' > $$@
 	$$(l1)#GEN build/$</$$@
 
@@ -393,6 +403,7 @@ padding: 2px 6px; background-color: grey; border-radius: 15px;}
 			<p class="breadcrumbs">
 				{{breadcrumbs}} {{title}}
 			</p>
+			{{cover}}
 			<h1>{{title}}</h1>
 			<p class="date">{{date}}</p>
 			<div class="tags">
@@ -434,6 +445,7 @@ endef
 define FULL_VIEW
 <li>
 	<p>
+		{{cover}}
 		{{breadcrumbs}} <a href="{{path}}">{{title}}</a>
 		<span class="date">{{date}}</span>
 	</p>
@@ -491,7 +503,7 @@ endef
 
 define UTILS
 define esc
-$$(strip $$(subst $$$$,\x24,$$(subst ~,\x7e,$$(subst ",\22,$$(subst ',\x27,\
+$$(strip $$(subst $$$$,\x24,$$(subst ~,\x7e,$$(subst ",\x22,$$(subst ',\x27,\
    $$1)))))
 endef
 define slugify
@@ -505,14 +517,16 @@ endef
 # 4. date format
 # 5. sort flags
 define pages
-cat $$1 | sort $$5 -t'\t' | while read -r tag; do \
-	title=`echo "$$$$tag" | cut -f1`; \
-	timestamp=`echo "$$$$tag" | cut -f2`; \
-	description=`echo "$$$$tag" | cut -f3`; \
-	path=`echo "$$$$tag" | cut -f4`; \
-	breadcrumbs=`echo "$$$$tag" | cut -f5`; \
+cat $$1 | sort $$5 -t'\t' | while read -r p; do \
+	title=`echo "$$$$p" | cut -f1`; \
+	timestamp=`echo "$$$$p" | cut -f2`; \
+	description=`echo "$$$$p" | cut -f3`; \
+	path=`echo "$$$$p" | cut -f4`; \
+	breadcrumbs=`echo "$$$$p" | cut -f5`; \
+	cover=`echo "$$$$p" | cut -f6`; \
 	date=`date +'$$4' -d @$$$$timestamp`; \
 	sed $$2 \
+	-e "s~{{cover}}~$$$$cover~" \
 	-e "s~{{title}}~$$$$title~" \
 	-e "s~{{date}}~$$$$date~" \
 	-e "s~{{description}}~$$$$description~" \
