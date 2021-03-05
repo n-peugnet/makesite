@@ -89,6 +89,8 @@
 
 # These programs are optional dependencies for some features to work properly:
 # - cmark <https://github.com/commonmark/cmark> for markdown files rendering.
+# - busybox <https://busybox.net/> for test server.
+# - fswatch <https://emcrisostomo.github.io/fswatch/> for files watcher.
 
 ################################### Tutorial ###################################
 
@@ -150,7 +152,9 @@
 #     make dev
 
 ifneq ($(word 2,$(MAKECMDGOALS)),)
-$(error cannot run multiple targets at a time)
+ifneq ($(filter clean,$(MAKECMDGOALS)),)
+$(error cannot run clean and other targets at the same time)
+endif
 endif
 
 include config
@@ -169,6 +173,7 @@ export view           ?= full
 export dateformat     ?= %FT%T%:z # ISO 8601
 export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
+export testport       ?= 8000
 
 # sanitize values
 export sitename       :=$(call esc,$(sitename))
@@ -733,6 +738,32 @@ templatesclean:
 siteclean:
 	$(l0)rm -rf public
 	$(l2)#RMV public files
+
+.PHONY: run
+run:
+	$(l0)$(MAKE) test watch -j2
+
+.PHONY: watch
+watch:
+ifeq (, $(shell which fswatch))
+	#ERR could not find fswatch
+else
+	$(l2)#RUN files watcher
+	$(l0)while true; do \
+		$(MAKE) site; \
+		fswatch -1r pages templates config Makefile --event 30 \
+			> /dev/null; \
+	done
+endif
+
+.PHONY: test
+test:
+ifeq (, $(shell which busybox))
+	#ERR could not find busybox
+else
+	$(l2)#RUN test server, visit http://localhost:$(testport)$(basepath)
+	$(l0)busybox httpd -f -h public -p $(testport)
+endif
 
 .PHONY: dev
 dev: .gitignore .vscode/settings.json
