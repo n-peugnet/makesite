@@ -174,7 +174,7 @@ export dateformat     ?= %FT%T%:z # ISO 8601
 export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
 export testport       ?= 8000
-export watchexclude   ?= (~|sw[px])$$
+export watchexclude   ?= /\.[^/]+(~|\.sw[a-z])$$
 
 # sanitize values
 export sitename       :=$(call esc,$(sitename))
