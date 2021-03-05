@@ -174,6 +174,7 @@ export dateformat     ?= %FT%T%:z # ISO 8601
 export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
 export testport       ?= 8000
+export watchexclude   ?= (~|sw[px])$$
 
 # sanitize values
 export sitename       :=$(call esc,$(sitename))
@@ -751,8 +752,9 @@ else
 	$(l2)#RUN files watcher
 	$(l0)while true; do \
 		$(MAKE) site; \
-		fswatch -1r pages templates config Makefile --event 30 \
-			> /dev/null; \
+		fswatch -1r --event 30 -Ee "$(watchexclude)" \
+			pages templates config Makefile \
+			$(if $(strip $(l1)),,#)> /dev/null; \
 	done
 endif
 
