@@ -162,12 +162,17 @@ include build/utils.mk
 
 # default config values
 export sitename       ?= Makesite
+export sitename       := $(call esc,$(sitename))
 export scheme         ?= http
 export domain         ?= localhost
+export domain         := $(subst /,,$(domain))
 export baseurl        ?= $(scheme)://$(domain)
 export basepath       ?=
+export basepath       := $(subst //,/,/$(basepath)/)
 export authorname     ?= nobody
+export authorname     := $(call esc,$(authorname))
 export authoremail    ?= $(authorname)@$(domain)
+export authoremail    := $(call esc,$(authoremail))
 export layout         ?= page
 export view           ?= full
 export dateformat     ?= %FT%T%:z # ISO 8601
@@ -175,13 +180,10 @@ export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
 export testport       ?= 8000
 export watchexclude   ?= /\.[^/]+(~|\.sw[a-z])$$
+export deploydest     ?= $(domain):public_html
+export deployflags    ?= -rltzh --progress --copy-unsafe-links
+export deploycmd      ?= rsync $(deployflags) public$(basepath) $(deploydest)
 
-# sanitize values
-export sitename       :=$(call esc,$(sitename))
-export domain         :=$(subst /,,$(domain))
-export basepath       :=$(subst //,/,/$(basepath)/)
-export authorname     :=$(call esc,$(authorname))
-export authoremail    :=$(call esc,$(authoremail))
 
 export l0:=$(if $(filter trace,$(loglevel)),,@)            # trace
 export l1:=$(if $(filter trace debug,$(loglevel)),,@)      # debug
@@ -767,6 +769,10 @@ else
 	$(l2)#RUN test server, visit http://localhost:$(testport)$(basepath)
 	$(l0)busybox httpd -f -h public -p $(testport)
 endif
+
+.PHONY: deploy
+deploy: site
+	$(deploycmd)
 
 .PHONY: dev
 dev: .gitignore .vscode/settings.json
