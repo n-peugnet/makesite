@@ -169,6 +169,7 @@ export domain         := $(subst /,,$(domain))
 export baseurl        ?= $(scheme)://$(domain)
 export basepath       ?=
 export basepath       := $(subst //,/,/$(basepath)/)
+export basepath_e     := $(call esc,$(basepath))
 export authorname     ?= nobody
 export authorname     := $(call esc,$(authorname))
 export authoremail    ?= $(authorname)@$(domain)
@@ -225,6 +226,7 @@ cover       :=$$(cover:$$(PAGE_DIR)/%=%)
 
 PAGESDIR    := $$(ROOT)/pages
 PAGE_PATH    = $$(subst //,/,$$(basepath)$$(PAGE)/)
+PAGE_PATH_e  = $$(call esc,$$(PAGE_PATH))
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
@@ -314,7 +316,7 @@ content.html: $$(ALL_HTML) $$(IMG)
 	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
 	$$(l0)cat $$(ALL_HTML) \
-	      | sed -E 's~(src|href)="(\.[^"]*)"~\\1="$$(PAGE_PATH)\\2"~g' \
+	      | sed -E 's~(src|href)="(\.[^"]*)"~\\1="$$(PAGE_PATH_e)\\2"~g' \
 	      >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
@@ -356,7 +358,7 @@ tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
 	$$(l0)cat $$< | xargs -I % echo \
 		%'\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
-		  \t$$(shell cat breadcrumbs.html)\t$$(COVER)$\
+		  \t$$(call esc,(shell cat breadcrumbs.html))\t$$(COVER)$\
 		  \t$$(shell stat -c %Y content.html)' > $$@
 	$$(l1)#GEN build/$</$$@
 
@@ -365,7 +367,7 @@ tags.html: tags
 	$$(l0)cat $$< | while read tag; do \
 		sed $$(TAG_VIEW) \
 		-e "s~{{tag}}~$$$$tag~" \
-		-e "s~{{path}}~$$(basepath)tags/$$$$tag~" \
+		-e "s~{{path}}~$$(basepath_e)tags/$$$$tag~" \
 		| tr -d '\\n' >> $$@; \
 	done
 	$$(l0)echo '</ul>' >> $$@
@@ -539,8 +541,8 @@ cat $$1 | sort $$5 -t'\t' | while read -r p; do \
 	-e "s~{{date}}~$$$$date~" \
 	-e "s~{{description}}~$$$$description~" \
 	-e "s~{{baseurl}}~$$(baseurl)~" \
-	-e "s~{{path}}~$$(basepath)$$$$path~" \
-	-e "s~{{id}}~$$(baseurl)$$(basepath)$$$$path~" \
+	-e "s~{{path}}~$$(basepath_e)$$$$path~" \
+	-e "s~{{id}}~$$(baseurl)$$(basepath_e)$$$$path~" \
 	-e "s~{{authorname}}~$$(authorname)~" \
 	-e "s~{{authoremail}}~$$(authoremail)~" \
 	-e "s~{{breadcrumbs}}~$$$$breadcrumbs~" \
@@ -556,10 +558,10 @@ endef
 define atomfeed
 sed $$(ROOT)/build/templates/layout/feed.atom \
 -e 's~{{title}}~$$4~' \
--e 's~{{id}}~$$(baseurl)$$(basepath)$$1~' \
+-e 's~{{id}}~$$(baseurl)$$(basepath_e)$$1~' \
 -e 's~{{sitename}}~$$(sitename)~' \
--e 's~{{link}}~$$(baseurl)$$(basepath)$$1feed.atom~' \
--e 's~{{root}}~$$(baseurl)$$(basepath)~' \
+-e 's~{{link}}~$$(baseurl)$$(basepath_e)$$1feed.atom~' \
+-e 's~{{root}}~$$(baseurl)$$(basepath_e)~' \
 -e 's~{{date}}~$$(DATE)~' \
 -e 's~{{sitename}}~$$(sitename)~' \
 -e '/{{pages}}/{r $$2' -e 'd}' \
