@@ -15,8 +15,10 @@
 # See <https://www.gnu.org/licenses/gpl-3.0.txt> for the full text of the
 # GNU General Public License version 3.0.
 
-################################## Principles ##################################
-
+# Principles
+# ==============================================================================
+# Basics
+# ------
 # Makesite is a static-site-generator based on a mere Makefile.
 # The content of the website must be located in a directory called `pages`.
 # The result of the compilation will be located in the `public` directory.
@@ -26,6 +28,7 @@
 # respective folders.
 
 # Here is a summary of the tree structure's directories:
+#
 #     .
 #     ├── Makefile                # This file
 #     ├── build                   # Intermediate build files
@@ -45,6 +48,8 @@
 # This folder can also be used to store images that wont be automatically
 # included in the content.
 
+# Configuration
+# -------------
 # Each page can contain a `config` file to override the default variables. Here
 # is a sample page's `config` file containing all the variables you can define
 # inside (all of them are optional):
@@ -75,25 +80,30 @@
 #     dateformat = %d/%m/%y
 #     imagesext = png|gif
 
+# Tags
+# ----
 # It is possible to add tags to a page by adding each of them in a new line of
 # its `tags` file. These tags will replace the `{{tags}}` portion of the layout
 # and provides another way to browse the website.
 # An atom/rss feed is generated for each tag and made autodiscoverable.
 
-################################# Dependencies #################################
-
+# Usage
+# ==============================================================================
+# Dependencies
+# ------------
 # Makesite requires the following programs to be in the PATH:
-# - make <https://www.gnu.org/software/make/> (obviously)
-# - coreutils <https://www.gnu.org/software/coreutils/>
-# - sed <https://www.gnu.org/software/sed/>
+# - [make](https://www.gnu.org/software/make/) (obviously)
+# - [coreutils](https://www.gnu.org/software/coreutils/)
+# - [sed](https://www.gnu.org/software/sed/)
 
 # These programs are optional dependencies for some features to work properly:
-# - cmark <https://github.com/commonmark/cmark> for markdown files rendering.
-# - busybox <https://busybox.net/> for test server.
-# - fswatch <https://emcrisostomo.github.io/fswatch/> for files watcher.
+# - [cmark](https://github.com/commonmark/cmark) for markdown files rendering.
+# - [busybox](https://busybox.net/) for test server.
+# - [fswatch](https://emcrisostomo.github.io/fswatch/) for files watcher.
+# - [rsync](https://rsync.samba.org/) as the default deploy command
 
-################################### Tutorial ###################################
-
+# Tutorial
+# --------
 # Download the latest version of this file in an empty directory and run it:
 #
 #     wget https://github.com/n-peugnet/makesite/raw/master/Makefile
@@ -101,11 +111,19 @@
 #
 # This will create the base directory structure detailled above and the first
 # page of your website: `index.html` in the `public` directory. To browse the
-# website you will have to make it accessible with a webserver.
-# To add content to the home page you can add an `.html` file in the `pages`
-# folder then run once again:
+# website you will have to make it accessible with a webserver. For this, you
+# can use the test server (requires busybox, ctrl+c to stop):
 #
-#     make
+#     make test
+
+# To add content to the home page you can add a `.html` file in the `pages`
+# folder then run makesite once again, but this time in watch mode (requires
+# fswatch, ctrl+c to stop):
+#
+#     make watch
+#
+# This mode will automatically rebuild the site on file changes. It is possible
+# to run both of these commands at once using `make run`.
 
 # You can also add new directories in `pages` to create new pages.
 # Makesite will automatically add links in the parent page and breadcrumbs to
@@ -120,8 +138,8 @@
 #
 # This will ensure that the deleted content is removed from your website.
 
-################################ Customization #################################
-
+# Customization
+# -------------
 # It is of course possible to customize the website created by a great extent.
 # Any number of templates can be added in their respective folder and used in
 # specific pages or all of them using the `layout` and `view` variables of the
@@ -130,8 +148,8 @@
 # Styles can also be easily defined for one or a set of pages by adding `.css`
 # files in the `assets` folders.
 
-################################# Limitations ##################################
-
+# Limitations
+# -----------
 # A static-site-generator based on a Makefile is not really the sanest idea.
 # This is why Makesite has some serious limitations. Here is the full list:
 # - The ` ` character is not allowed in any file or folder name (and the use
@@ -141,12 +159,13 @@
 #   interpreted as a variable in Makesite.
 # - Relative path in content (images,links,...) must start with `./` or `../`.
 
-################################# Developement #################################
-
+# Developement
+# ==============================================================================
 # Code style:
 # - Tab is 8 spaces.
 # - Max width is 80 columns.
 # - Configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.
+#
 # Here is a special target to get developers started:
 #
 #     make dev
