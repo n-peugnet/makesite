@@ -358,7 +358,7 @@ tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
 	$$(l0)cat $$< | xargs -I % echo \
 		%'\t$$(title)\t$$(date)\t$$(description)\t$$(PAGE)$\
-		  \t$$(call esc,(shell cat breadcrumbs.html))\t$$(COVER)$\
+		  \t$$(call esc,$$(shell cat breadcrumbs.html))\t$$(COVER)$\
 		  \t$$(shell stat -c %Y content.html)' > $$@
 	$$(l1)#GEN build/$</$$@
 
