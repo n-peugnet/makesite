@@ -575,17 +575,18 @@ PAGE_CONF_LIST := $(shell find pages -mindepth 1 -type f -name config)
 TPL_LIST       := $(shell find templates -mindepth 1 -type f -name '*.html')
 BUILD_TAGS_LIST:= $(patsubst %,build/%page,$(PAGE_TAGS_LIST))
 BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGE_LIST))
-PUBLIC_PAGES   := $(patsubst pages/%,public/%,$(PAGE_LIST))
-PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) public/index.html
+PUBDIR         := public$(basepath)
+PUBLIC_PAGES   := $(patsubst pages/%,$(PUBDIR)%,$(PAGE_LIST))
+PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) $(PUBDIR)index.html
 
 ASSETS_DIR := $(shell find pages -mindepth 1 -type d -name assets)
 JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
 CSS    := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.css))
-PUBLIC_JS  := $(JS:pages/%=public/%)
-PUBLIC_CSS := $(CSS:pages/%=public/%)
+PUBLIC_JS  := $(JS:pages/%=$(PUBDIR)%)
+PUBLIC_CSS := $(CSS:pages/%=$(PUBDIR)%)
 
 IMG        := $(shell find pages | grep -E '($(imagesext))$$')
-PUBLIC_IMG := $(IMG:pages/%=public/%)
+PUBLIC_IMG := $(IMG:pages/%=$(PUBDIR)%)
 
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 
@@ -603,12 +604,12 @@ R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell $(call slugify,$(PAGE_TAGS_LIST)))
 TAGS_META    := $(TAGS:%=build/tags/%/metadatas)
-TAGS_INDEXES := $(TAGS:%=public/tags/%/index.html)
-TAGS_FEEDS   := $(TAGS:%=public/tags/%/feed.atom)
+TAGS_INDEXES := $(TAGS:%=$(PUBDIR)tags/%/index.html)
+TAGS_FEEDS   := $(TAGS:%=$(PUBDIR)tags/%/feed.atom)
 endif
 
 PAGE_FEED_LIST := $(shell grep -rlE 'feed ?= ?1' pages --include config)
-PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=public/%/feed.atom)
+PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=$(PUBDIR)%/feed.atom)
 
 .PHONY: site
 site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PAGE_FEEDS)\
@@ -618,17 +619,17 @@ pages:
 	$(l0)mkdir $@
 	$(l2)#CREA $@ directory
 
-$(ASSETS): public/%: pages/%
+$(ASSETS): $(PUBDIR)%: pages/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
 
-$(PUBLIC_INDEXES) $(PAGE_FEEDS): public/%: build/pages/%
+$(PUBLIC_INDEXES) $(PAGE_FEEDS): $(PUBDIR)%: build/pages/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
 
-$(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
+$(TAGS_INDEXES): $(PUBDIR)tags/%/index.html: build/tags/%/pages.html \
 					   build/pages/head.html \
 					   $(TAGS_LAYOUT)
 	$(l0)mkdir -p $(@D)
@@ -640,7 +641,7 @@ $(TAGS_INDEXES): public/tags/%/index.html: build/tags/%/pages.html \
 	> $@
 	$(l2)#PUB $@
 
-$(TAGS_FEEDS): public/%: build/%
+$(TAGS_FEEDS): $(PUBDIR)%: build/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
