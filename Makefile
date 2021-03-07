@@ -148,6 +148,12 @@
 # Styles can also be easily defined for one or a set of pages by adding `.css`
 # files in the `assets` folders.
 
+# Deployment
+# ----------
+# The command `deploy` makes deployments easy. It uses rsync by default so you
+# just have to set the variable `deploydest` in the root config to make it work.
+# If rsync is not enough, you can define a custom command in `deploycmd`.
+
 # Limitations
 # -----------
 # A static-site-generator based on a Makefile is not really the sanest idea.
@@ -200,8 +206,10 @@ export imagesext      ?= png|jpe?g|gif|tiff
 export loglevel       ?= info # trace|debug|info|error
 export testport       ?= 8000
 export watchexclude   ?= /\.[^/]+(~|\.sw[a-z])$$
-export deploydest     ?= $(domain):public_html
-export deployflags    ?= -rltzh --progress --copy-unsafe-links
+ifdef (deploycmd)
+export deploydest     ?= none
+endif
+export deployflags    ?= -rltzh --delete --copy-unsafe-links
 export deploycmd      ?= rsync $(deployflags) public$(basepath) $(deploydest)
 
 
@@ -795,7 +803,12 @@ endif
 
 .PHONY: deploy
 deploy: site
-	$(deploycmd)
+ifeq (, $(deploydest))
+	#ERR deploydest is not defined
+else
+	$(l0)$(deploycmd)
+	$(l2)#RUN finished deployment, visit $(baseurl)$(basepath)
+endif
 
 .PHONY: dev
 dev: .gitignore .vscode/settings.json
