@@ -316,7 +316,9 @@ content.html: $$(ALL_HTML) $$(IMG)
 	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
 	$$(l0)cat $$(ALL_HTML) \
-	      | sed -E 's~(src|href)="(\.[^"]*)"~\\1="$$(PAGE_PATH_e)\\2"~g' \
+	      | sed -E \
+	      -e 's~(src|href)="/([^"]*)"~\\1="$$(basepath_e)\\2"~g' \
+	      -e 's~(src|href)="\./([^"]*)"~\\1="$$(PAGE_PATH_e)\\2"~g' \
 	      >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
