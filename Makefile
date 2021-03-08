@@ -207,6 +207,7 @@ export layout         ?= page
 export view           ?= full
 export dateformat     ?= %FT%T%:z # ISO 8601
 export imagesext      ?= png|jpe?g|gif|tiff
+export separator      ?= /
 export loglevel       ?= info # trace|debug|info|error
 export testport       ?= 8000
 export watchexclude   ?= /\.[^/]+(~|\.sw[a-z])$$
@@ -260,7 +261,6 @@ PAGESDIR    := $$(ROOT)/pages
 PAGE_PATH    = $$(subst //,/,$$(basepath)$$(PAGE)/)
 PAGE_PATH_e  = $$(call esc,$$(PAGE_PATH))
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
-SEPARATOR   := /
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 			     \! -name assets)
 SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
@@ -339,7 +339,7 @@ breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
 	$$(l0)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
 	$$(l0)printf '<a href="$$(subst //,/,$$(basepath)$$(PARENT))"\
-		     >$$(shell cut -f1 ../metadatas)</a> $$(SEPARATOR) ' >> $$@
+		     >$$(shell cut -f1 ../metadatas)</a> $$(separator) ' >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
 
@@ -456,28 +456,6 @@ padding: 2px 6px; background-color: grey; border-radius: 15px;}
 			{{content}}
 		</section>
 		<section>
-			{{pages}}
-		</section>
-	</body>
-</html>
-endef
-
-################################## Tag layout ##################################
-
-define TAG_LAYOUT
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Tag: {{tag}} - {{sitename}}</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link href="feed.atom" title="Tag: {{tag}} Atom feed" \
-		      rel="alternate" type="application/atom+xml" />
-		{{head}}
-	</head>
-	<body>
-		<section>
-			<h1>Tag: {{tag}}</h1>
 			{{pages}}
 		</section>
 	</body>
@@ -620,24 +598,24 @@ TPL_LIST       := $(shell find templates -mindepth 1 -type f -name '*.html')
 endif
 BUILD_TAGS_LIST:= $(patsubst %,build/%page,$(PAGE_TAGS_LIST))
 BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGE_LIST))
-PUBDIR         := public$(basepath)
-PUBLIC_PAGES   := $(patsubst pages/%,$(PUBDIR)%,$(PAGE_LIST))
-PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) $(PUBDIR)index.html
+PUBD           := public$(basepath)
+PUBLIC_PAGES   := $(patsubst pages/%,$(PUBD)%,$(PAGE_LIST))
+PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) $(PUBD)index.html
 
 JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
 CSS    := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.css))
-PUBLIC_JS  := $(JS:pages/%=$(PUBDIR)%)
-PUBLIC_CSS := $(CSS:pages/%=$(PUBDIR)%)
-PUBLIC_IMG := $(IMG:pages/%=$(PUBDIR)%)
+PUBLIC_JS  := $(JS:pages/%=$(PUBD)%)
+PUBLIC_CSS := $(CSS:pages/%=$(PUBD)%)
+PUBLIC_IMG := $(IMG:pages/%=$(PUBD)%)
 
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
 
-TEMPLATES := layout/page layout/tag view/full view/tag
+TEMPLATES := layout/page view/full view/tag
 TEMPLATES := $(TEMPLATES:%=templates/%.html)
 BUILD_TPL := $(patsubst %,build/%,$(sort $(TEMPLATES) $(TPL_LIST)))
 ATOM_TPL  := $(patsubst %,build/templates/%.atom,layout/feed view/entry)
 TAGS_VIEW   := build/templates/view/$(view).html
-TAGS_LAYOUT := build/templates/layout/tag.html
+TAGS_LAYOUT := build/templates/layout/$(layout).html
 
 # theses are the variables that will be replaced by the content of a file.
 R_VARS     = head breadcrumbs tags content pages
@@ -646,11 +624,11 @@ R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell $(call slugify,$(PAGE_TAGS_LIST)))
 TAGS_META    := $(TAGS:%=build/tags/%/metadatas)
-TAGS_INDEXES := $(TAGS:%=$(PUBDIR)tags/%/index.html)
-TAGS_FEEDS   := $(TAGS:%=$(PUBDIR)tags/%/feed.atom)
+TAGS_INDEXES := $(TAGS:%=$(PUBD)tags/%/index.html)
+TAGS_FEEDS   := $(TAGS:%=$(PUBD)tags/%/feed.atom)
 endif
 
-PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=$(PUBDIR)%/feed.atom)
+PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=$(PUBD)%/feed.atom)
 
 .PHONY: site
 site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PAGE_FEEDS)\
@@ -660,29 +638,39 @@ pages templates build public:
 	$(l0)mkdir $@
 	$(l2)#CREA $@ directory
 
-$(ASSETS): $(PUBDIR)%: pages/%
+$(ASSETS): $(PUBD)%: pages/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
 
-$(PUBLIC_INDEXES) $(PAGE_FEEDS): $(PUBDIR)%: build/pages/%
+$(PUBLIC_INDEXES) $(PAGE_FEEDS): $(PUBD)%: build/pages/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
 
-$(TAGS_INDEXES): $(PUBDIR)tags/%/index.html: build/tags/%/pages.html \
+$(TAGS_INDEXES): $(PUBD)tags/%/index.html: build/tags/%/pages.html \
+					   build/tags/%/head.html \
 					   build/pages/head.html \
+					   build/pages/metadatas \
 					   $(TAGS_LAYOUT)
 	$(l0)mkdir -p $(@D)
-	$(l0)sed $(TAGS_LAYOUT) \
+	$(l0)root=`cut build/pages/metadatas -f1`; \
+	sed $(TAGS_LAYOUT) \
 	-e 's~{{sitename}}~$(sitename)~' \
-	-e 's~{{tag}}~$*~' \
-	-e '/{{head}}/{r build/pages/head.html' -e 'd}' \
+	-e 's~{{title}}~Tag: $*~' \
+	-e 's~{{cover}}~~' \
+	-e 's~{{keywords}}~~' \
+	-e 's~{{date}}~~' \
+	-e 's~{{description}}~Tag: $*~' \
+	-e "s~{{breadcrumbs}}~<a href=$(basepath)>$$root</a> $(separator)~" \
+	-e 's~{{tags}}~~' \
+	-e 's~{{content}}~~' \
+	-e '/{{head}}/{r build/pages/head.html' -e 'r $(word 2,$^)' -e 'd}' \
 	-e '/{{pages}}/{r $<' -e 'd}' \
 	> $@
 	$(l2)#PUB $@
 
-$(TAGS_FEEDS): $(PUBDIR)%: build/%
+$(TAGS_FEEDS): $(PUBD)%: build/%
 	$(l0)mkdir -p $(@D)
 	$(l0)cp $< $@
 	$(l2)#PUB $@
@@ -711,6 +699,12 @@ build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadatas
 	$(l0)echo '<ul>' > $@
 	$(l0)$(call pages,build/tags/$*/metadatas,$<,$@,$(dateformat),-nrk2)
 	$(l0)echo '</ul>' >> $@
+	$(l1)#GEN $@
+
+build/tags/%/head.html: Makefile
+	$(l0)mkdir -p $(@D)
+	$(l0)echo '<link href="feed.atom" title="Tag: $* Atom feed"' \
+			'rel="alternate" type="application/atom+xml">' > $@
 	$(l1)#GEN $@
 
 $(TAGS_META): build/tags ;
@@ -749,7 +743,6 @@ $(BUILD_TPL): build/%: %
 	$(l1)#SAN $@
 
 templates/layout/page.html: export CONTENT=$(PAGE_LAYOUT)
-templates/layout/tag.html: export CONTENT=$(TAG_LAYOUT)
 templates/view/full.html: export CONTENT=$(FULL_VIEW)
 templates/view/tag.html: export CONTENT=$(TAG_VIEW)
 build/templates/layout/feed.atom: export CONTENT=$(ATOM_LAYOUT)
