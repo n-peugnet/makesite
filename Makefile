@@ -185,9 +185,10 @@ $(error cannot run clean and other targets at the same time)
 endif
 endif
 
-include config
 include build/utils.mk
 
+ifeq (0,$(MAKELEVEL))
+include config
 # default config values
 export sitename       ?= Makesite
 export sitename       := $(call esc,$(sitename))
@@ -221,6 +222,7 @@ export l1:=$(if $(filter trace debug,$(loglevel)),,@)      # debug
 export l2:=$(if $(filter trace debug info,$(loglevel)),,@) # info
 MAKEFLAGS+=$(if $(filter trace debug,$(loglevel)),, --no-print-directory)
 export ROOT=$(CURDIR)
+endif
 
 ################################# SubMakefile ##################################
 
@@ -654,7 +656,7 @@ PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=$(PUBDIR)%/feed.atom)
 site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PAGE_FEEDS)\
       $(PUBLIC_INDEXES)
 
-pages templates build:
+pages templates build public:
 	$(l0)mkdir $@
 	$(l2)#CREA $@ directory
 
@@ -799,12 +801,12 @@ else
 endif
 
 .PHONY: test
-test:
+test: public
 ifeq (, $(shell which busybox))
 	#ERR could not find busybox
 else
 	$(l2)#RUN test server, visit http://localhost:$(testport)$(basepath)
-	$(l0)busybox httpd -f -h public -p $(testport)
+	$(l0)busybox httpd -f -h $< -p $(testport)
 endif
 
 .PHONY: deploy
