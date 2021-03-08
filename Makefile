@@ -15,7 +15,7 @@
 # See <https://www.gnu.org/licenses/gpl-3.0.txt> for the full text of the
 # GNU General Public License version 3.0.
 
-## run `make docs` to see the rendered version.
+## run `make docs` to see the rendered version. (requires cmark)
 ##
 # Makesite documentation
 # ==============================================================================
