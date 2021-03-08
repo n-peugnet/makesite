@@ -15,7 +15,9 @@
 # See <https://www.gnu.org/licenses/gpl-3.0.txt> for the full text of the
 # GNU General Public License version 3.0.
 
-# Principles
+## run `make docs` to see the rendered version.
+##
+# Makesite documentation
 # ==============================================================================
 # Basics
 # ------
@@ -97,7 +99,7 @@
 # - [sed](https://www.gnu.org/software/sed/)
 
 # These programs are optional dependencies for some features to work properly:
-# - [cmark](https://github.com/commonmark/cmark) for markdown files rendering.
+# - [cmark](https://github.com/commonmark/cmark) for markdown render and docs.
 # - [busybox](https://busybox.net/) for test server.
 # - [fswatch](https://emcrisostomo.github.io/fswatch/) for files watcher.
 # - [rsync](https://rsync.samba.org/) as the default deploy command
@@ -175,6 +177,7 @@
 # Here is a special target to get developers started:
 #
 #     make dev
+##
 
 ifneq ($(word 2,$(MAKECMDGOALS)),)
 ifneq ($(filter clean,$(MAKECMDGOALS)),)
@@ -809,6 +812,16 @@ else
 	$(l0)$(deploycmd)
 	$(l2)#RUN finished deployment, visit $(baseurl)$(basepath)
 endif
+
+.PHONY: docs
+docs: build/docs.html
+	$(l2)#RUN open $< with web browser
+	$(l0)xdg-open $<
+
+build/docs.html: Makefile
+	$(l0)mkdir -p $(@D)
+	$(l0)sed -n '/^##$$/,/^##$$/p' Makefile | sed 's/^#*//' | cmark > $@
+	$(l2)#GEN $@
 
 .PHONY: dev
 dev: .gitignore .vscode/settings.json
