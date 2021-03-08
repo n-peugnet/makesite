@@ -605,23 +605,27 @@ endef
 
 export DATE     = $(shell date --iso-8601=seconds)
 
+ifneq (,$(wildcard pages))
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
 PAGE_CONF_LIST := $(shell find pages -mindepth 1 -type f -name config)
+ASSETS_DIR     := $(shell find pages -mindepth 1 -type d -name assets)
+IMG            := $(shell find pages | grep -E '($(imagesext))$$')
+PAGE_FEED_LIST := $(shell grep -rlE 'feed ?= ?1' pages --include config)
+endif
+ifneq (,$(wildcard templates))
 TPL_LIST       := $(shell find templates -mindepth 1 -type f -name '*.html')
+endif
 BUILD_TAGS_LIST:= $(patsubst %,build/%page,$(PAGE_TAGS_LIST))
 BUILD_MK_LIST  := $(patsubst %,build/%/Makefile,$(PAGE_LIST))
 PUBDIR         := public$(basepath)
 PUBLIC_PAGES   := $(patsubst pages/%,$(PUBDIR)%,$(PAGE_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) $(PUBDIR)index.html
 
-ASSETS_DIR := $(shell find pages -mindepth 1 -type d -name assets)
 JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
 CSS    := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.css))
 PUBLIC_JS  := $(JS:pages/%=$(PUBDIR)%)
 PUBLIC_CSS := $(CSS:pages/%=$(PUBDIR)%)
-
-IMG        := $(shell find pages | grep -E '($(imagesext))$$')
 PUBLIC_IMG := $(IMG:pages/%=$(PUBDIR)%)
 
 ASSETS := $(PUBLIC_JS) $(PUBLIC_CSS) $(PUBLIC_IMG)
@@ -644,14 +648,13 @@ TAGS_INDEXES := $(TAGS:%=$(PUBDIR)tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=$(PUBDIR)tags/%/feed.atom)
 endif
 
-PAGE_FEED_LIST := $(shell grep -rlE 'feed ?= ?1' pages --include config)
 PAGE_FEEDS     := $(PAGE_FEED_LIST:pages/%/config=$(PUBDIR)%/feed.atom)
 
 .PHONY: site
 site: pages $(ASSETS) $(TAGS_INDEXES) $(TAGS_FEEDS) $(PAGE_FEEDS)\
       $(PUBLIC_INDEXES)
 
-pages:
+pages templates build:
 	$(l0)mkdir $@
 	$(l2)#CREA $@ directory
 
@@ -750,7 +753,7 @@ templates/view/tag.html: export CONTENT=$(TAG_VIEW)
 build/templates/layout/feed.atom: export CONTENT=$(ATOM_LAYOUT)
 build/templates/view/entry.atom: export CONTENT=$(ATOMENTRY_VIEW)
 build/utils.mk: export CONTENT=$(UTILS)
-$(TEMPLATES) $(ATOM_TPL) build/utils.mk: Makefile
+$(TEMPLATES) $(ATOM_TPL) build/utils.mk: Makefile | templates build pages
 	$(l0)mkdir -p $(@D)
 	$(l0)echo "$$CONTENT" > $@
 	$(l1)#GEN $@
@@ -818,8 +821,7 @@ docs: build/docs.html
 	$(l2)#RUN open $< with web browser
 	$(l0)xdg-open $<
 
-build/docs.html: Makefile
-	$(l0)mkdir -p $(@D)
+build/docs.html: Makefile | build
 	$(l0)sed -n '/^##$$/,/^##$$/p' Makefile | sed 's/^#*//' | cmark > $@
 	$(l2)#GEN $@
 
