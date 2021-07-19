@@ -1,0 +1,136 @@
+<h1>Makesite documentation</h1>
+<h2>Basics</h2>
+<p>Makesite is a static-site-generator based on a mere Makefile.
+The content of the website must be located in a directory called <code>pages</code>.
+The result of the compilation will be located in the <code>public</code> directory.
+During the compilation, Makesite will keep intermediate files in the <code>build</code>
+directory. This way it does not have to recompile everything on each call.
+Lastly the <code>templates</code> directory contains the view and layout files in their
+respective folders.</p>
+<p>Here is a summary of the tree structure's directories:</p>
+<pre><code> .
+ ├── Makefile                # This file
+ ├── build                   # Intermediate build files
+ ├── pages                   # Pages content
+ ├── public                  # Public website root
+ └── templates
+     ├── layout              # Layout files
+     └── view                # View files
+</code></pre>
+<p>In the <code>pages</code> directory, <em>every folder is a page</em>. Thus a <em>page's URL is its
+path</em>. The content of a page is rendered from every <code>.md</code> and <code>.html</code> and
+image files it contains, to which a list of the subpages is appended.</p>
+<p>There is only one exception to this principle: each page can have a special
+<code>assets</code> folder. Every <code>*.js</code>, <code>*.css</code> files and the <code>favicon.*</code> it contains
+are automatically added to the associated page and all of its children.
+This folder can also be used to store images that wont be automatically
+included in the content.</p>
+<h2>Configuration</h2>
+<p>Each page can contain a <code>config</code> file to override the default variables. Here
+is a sample page's <code>config</code> file containing all the variables you can define
+inside (all of them are optional):</p>
+<pre><code> # var         example                               default
+ title       = Home                                # (capitalized dir name)
+ layout      = page                                # (root layout)
+ view        = list                                # (root view)
+ date        = 2021-04-12                          # (dir mtime)
+ keywords    = makefile,static-site-generator
+ description = Home page of the Makesite's website
+ sort        = date/desc                           # title/asc
+ feed        = 1
+ cover       = assets/image.jpg                    # assets/cover.*
+</code></pre>
+<p>There is a &quot;root <code>config</code> file&quot; at the same level as this file that contains
+the website's global configuration. Here are the variables that can be set
+inside (all of them are optional):</p>
+<pre><code> sitename = Makesite
+ scheme = https
+ domain = club1.fr
+ basepath = some/sub/folder
+ authorname = nicolas
+ authoremail = nicolas@club1.fr
+ layout = custom
+ view = title
+ dateformat = %d/%m/%y
+ imagesext = png|gif
+</code></pre>
+<h2>Tags</h2>
+<p>It is possible to add tags to a page by adding each of them in a new line of
+its <code>tags</code> file. These tags will replace the <code>{{tags}}</code> portion of the layout
+and provides another way to browse the website.
+An atom/rss feed is generated for each tag and made autodiscoverable.</p>
+<h1>Usage</h1>
+<h2>Dependencies</h2>
+<p>Makesite requires the following programs to be in the PATH:</p>
+<ul>
+<li><a href="https://www.gnu.org/software/make/">make</a> (obviously)</li>
+<li><a href="https://www.gnu.org/software/coreutils/">coreutils</a></li>
+<li><a href="https://www.gnu.org/software/sed/">sed</a></li>
+</ul>
+<p>These programs are optional dependencies for some features to work properly:</p>
+<ul>
+<li><a href="https://github.com/commonmark/cmark">cmark</a> for markdown render and docs.</li>
+<li><a href="https://busybox.net/">busybox</a> for test server.</li>
+<li><a href="https://emcrisostomo.github.io/fswatch/">fswatch</a> for files watcher.</li>
+<li><a href="https://rsync.samba.org/">rsync</a> as the default deploy command</li>
+</ul>
+<h2>Tutorial</h2>
+<p>Download the latest version of this file in an empty directory and run it:</p>
+<pre><code> wget https://github.com/n-peugnet/makesite/raw/master/Makefile
+ make
+</code></pre>
+<p>This will create the base directory structure detailled above and the first
+page of your website: <code>index.html</code> in the <code>public</code> directory. To browse the
+website you will have to make it accessible with a webserver. For this, you
+can use the test server (requires busybox, ctrl+c to stop):</p>
+<pre><code> make test
+</code></pre>
+<p>To add content to the home page you can add a <code>.html</code> file in the <code>pages</code>
+folder then run makesite once again, but this time in watch mode (requires
+fswatch, ctrl+c to stop):</p>
+<pre><code> make watch
+</code></pre>
+<p>This mode will automatically rebuild the site on file changes. It is possible
+to run both of these commands at once using <code>make run</code>.</p>
+<p>You can also add new directories in <code>pages</code> to create new pages.
+Makesite will automatically add links in the parent page and breadcrumbs to
+every pages to make your website fully navigable.
+For this feature to work properly you will have to set the <code>basepath</code> variable
+accordingly.</p>
+<p>If you deleted some files from the <code>pages</code> directory, then its better to run:</p>
+<pre><code> make clean
+ make
+</code></pre>
+<p>This will ensure that the deleted content is removed from your website.</p>
+<h2>Customization</h2>
+<p>It is of course possible to customize the website created by a great extent.
+Any number of templates can be added in their respective folder and used in
+specific pages or all of them using the <code>layout</code> and <code>view</code> variables of the
+according <code>config</code> file.</p>
+<p>Styles can also be easily defined for one or a set of pages by adding <code>.css</code>
+files in the <code>assets</code> folders.</p>
+<h2>Deployment</h2>
+<p>The command <code>deploy</code> makes deployments easy. It uses rsync by default so you
+just have to set the variable <code>deploydest</code> in the root config to make it work.
+If rsync is not enough, you can define a custom command in <code>deploycmd</code>.</p>
+<h2>Limitations</h2>
+<p>A static-site-generator based on a Makefile is not really the sanest idea.
+This is why Makesite has some serious limitations. Here is the full list:</p>
+<ul>
+<li>The <code> </code> character is not allowed in any file or folder name (and the use
+of any special character is strongly discouraged). Instead you can use the
+character <code>_</code> which will be converted to space in the default title.</li>
+<li>The <code>$</code> character must be written <code>$$</code> in <code>config</code> files not to be
+interpreted as a variable in Makesite.</li>
+<li>Relative path in content (images,links,...) must start with <code>./</code> or <code>../</code>.</li>
+</ul>
+<h1>Developement</h1>
+<p>Code style:</p>
+<ul>
+<li>Tab is 8 spaces.</li>
+<li>Max width is 80 columns.</li>
+<li>Configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.</li>
+</ul>
+<p>Here is a special target to get developers started:</p>
+<pre><code> make dev
+</code></pre>
