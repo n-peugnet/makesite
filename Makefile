@@ -174,9 +174,10 @@
 # - Max width is 80 columns.
 # - Configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.
 #
-# Here is a special target to get developers started:
+# The set of targets under `dev/` are there to help developers. The `init` one
+# will create a basic dev environment.
 #
-#     make dev
+#     make dev/init
 ##
 
 ifneq ($(word 2,$(MAKECMDGOALS)),)
@@ -820,9 +821,21 @@ build/docs.html: Makefile | build
 	$(l0)sed -n '/^##$$/,/^##$$/p' Makefile | sed 's/^#*//' | cmark > $@
 	$(l2)#GEN $@
 
-.PHONY: dev
-dev: .gitignore .vscode/settings.json
+.PHONY: dev/init
+dev/init: .gitignore .vscode/settings.json
 	echo loglevel = trace >> config
+
+.PHONY: dev/update-docs
+dev/update-docs: I=index.html
+dev/update-docs: REF=$(shell git branch --show-current)
+dev/update-docs: HEAD=$(shell git rev-parse HEAD)
+dev/update-docs: build/docs.html
+	git checkout docs
+	cp $< $I
+	git add -f $I
+	git commit -m "docs for $(HEAD)"
+	git push
+	git checkout $(REF)
 
 .vscode/settings.json:
 	mkdir -p $(@D)
