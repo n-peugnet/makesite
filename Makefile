@@ -815,7 +815,7 @@ endif
 .PHONY: docs
 docs: build/docs.html
 	$(l2)#RUN open $< with web browser
-	$(l0)xdg-open $<
+	$(l0)open $<
 
 build/docs.html: Makefile | build
 	$(l0)sed -En '/^##$$/,/^##$$/s/^#*\s?//p' Makefile | cmark > $@
