@@ -17,7 +17,7 @@
 
 ## run `make docs` to see the rendered version. (requires discount)
 ##
-# Makesite documentation
+# Documentation
 # ==============================================================================
 # Basics
 # ------
@@ -622,6 +622,7 @@ BUILD_TPL := $(patsubst %,build/%,$(sort $(TEMPLATES) $(TPL_LIST)))
 ATOM_TPL  := $(patsubst %,build/templates/%.atom,layout/feed view/entry)
 TAGS_VIEW   := build/templates/view/$(view).html
 TAGS_LAYOUT := build/templates/layout/$(layout).html
+DOCS_LAYOUT := build/templates/layout/page.html
 
 # theses are the variables that will be replaced by the content of a file.
 R_VARS     = head breadcrumbs tags content pages
@@ -764,7 +765,7 @@ config:
 	$(l2)#CREA $@
 
 .PHONY: clean
-clean: siteclean buildclean templatesclean
+clean: siteclean buildclean templatesclean docsclean
 
 .PHONY: buildclean
 buildclean:
@@ -775,6 +776,11 @@ buildclean:
 templatesclean:
 	$(l0)rm -rf $(TEMPLATES)
 	$(l2)#RMV template files
+
+.PHONY: docsclean
+docsclean:
+	$(l0)rm -rf docs.html
+	$(l2)#RMV docs files
 
 .PHONY: siteclean
 siteclean:
@@ -818,13 +824,29 @@ else
 endif
 
 .PHONY: docs
-docs: build/docs.html
+docs: docs.html
 	$(l2)#RUN open $< with web browser
 	$(l0)open $<
 
-build/docs.html: Makefile | build
-	$(l0)sed -En '/^##$$/,/^##$$/s/^#*\s?//p' Makefile | $(markdownc) > $@
+docs.html: build/docs.html $(DOCS_LAYOUT)
+	$(l0)sed $(DOCS_LAYOUT) \
+	-e '/{{breadcrumbs}}/,+1 d' \
+	-e 's~{{sitename}}~Documentation~' \
+	-e 's~{{title}}~Makesite~' \
+	-e 's~{{description}}~Makesite static site generator docs~' \
+	-e 's~{{date}}~$(shell date --iso-8601)~' \
+	-e 's~{{cover}}~~' \
+	-e 's~{{keywords}}~~' \
+	-e 's~{{tags}}~~' \
+	-e '/{{content}}/{r $<' -e 'd}' \
+	-e 's~{{head}}~~' \
+	-e 's~{{pages}}~~' \
+	> $@
 	$(l2)#GEN $@
+
+build/docs.html: Makefile | build
+	$(l0)sed -En '/^##$$/,/^##$$/s/^#*\s?//p' $< | $(markdownc) -T > $@
+	$(l1)#GEN $@
 
 .PHONY: dev/init
 dev/init: .gitignore .vscode/settings.json
@@ -834,7 +856,7 @@ dev/init: .gitignore .vscode/settings.json
 dev/update-docs: I=index.html
 dev/update-docs: REF=$(shell git branch --show-current)
 dev/update-docs: HEAD=$(shell git rev-parse HEAD)
-dev/update-docs: build/docs.html
+dev/update-docs: docs.html
 	git checkout docs
 	cp $< $I
 	git add -f $I
