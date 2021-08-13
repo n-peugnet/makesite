@@ -818,7 +818,7 @@ docs: build/docs.html
 	$(l0)xdg-open $<
 
 build/docs.html: Makefile | build
-	$(l0)sed -n '/^##$$/,/^##$$/p' Makefile | sed 's/^#*//' | cmark > $@
+	$(l0)sed -En '/^##$$/,/^##$$/s/^#*\s?//p' Makefile | cmark > $@
 	$(l2)#GEN $@
 
 .PHONY: dev/init
