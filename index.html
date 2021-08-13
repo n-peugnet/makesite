@@ -8,14 +8,14 @@ directory. This way it does not have to recompile everything on each call.
 Lastly the <code>templates</code> directory contains the view and layout files in their
 respective folders.</p>
 <p>Here is a summary of the tree structure's directories:</p>
-<pre><code> .
- ├── Makefile                # This file
- ├── build                   # Intermediate build files
- ├── pages                   # Pages content
- ├── public                  # Public website root
- └── templates
-     ├── layout              # Layout files
-     └── view                # View files
+<pre><code>.
+├── Makefile                # This file
+├── build                   # Intermediate build files
+├── pages                   # Pages content
+├── public                  # Public website root
+└── templates
+    ├── layout              # Layout files
+    └── view                # View files
 </code></pre>
 <p>In the <code>pages</code> directory, <em>every folder is a page</em>. Thus a <em>page's URL is its
 path</em>. The content of a page is rendered from every <code>.md</code> and <code>.html</code> and
@@ -29,30 +29,30 @@ included in the content.</p>
 <p>Each page can contain a <code>config</code> file to override the default variables. Here
 is a sample page's <code>config</code> file containing all the variables you can define
 inside (all of them are optional):</p>
-<pre><code> # var         example                               default
- title       = Home                                # (capitalized dir name)
- layout      = page                                # (root layout)
- view        = list                                # (root view)
- date        = 2021-04-12                          # (dir mtime)
- keywords    = makefile,static-site-generator
- description = Home page of the Makesite's website
- sort        = date/desc                           # title/asc
- feed        = 1
- cover       = assets/image.jpg                    # assets/cover.*
+<pre><code># var         example                               default
+title       = Home                                # (capitalized dir name)
+layout      = page                                # (root layout)
+view        = list                                # (root view)
+date        = 2021-04-12                          # (dir mtime)
+keywords    = makefile,static-site-generator
+description = Home page of the Makesite's website
+sort        = date/desc                           # title/asc
+feed        = 1
+cover       = assets/image.jpg                    # assets/cover.*
 </code></pre>
 <p>There is a &quot;root <code>config</code> file&quot; at the same level as this file that contains
 the website's global configuration. Here are the variables that can be set
 inside (all of them are optional):</p>
-<pre><code> sitename = Makesite
- scheme = https
- domain = club1.fr
- basepath = some/sub/folder
- authorname = nicolas
- authoremail = nicolas@club1.fr
- layout = custom
- view = title
- dateformat = %d/%m/%y
- imagesext = png|gif
+<pre><code>sitename = Makesite
+scheme = https
+domain = club1.fr
+basepath = some/sub/folder
+authorname = nicolas
+authoremail = nicolas@club1.fr
+layout = custom
+view = title
+dateformat = %d/%m/%y
+imagesext = png|gif
 </code></pre>
 <h2>Tags</h2>
 <p>It is possible to add tags to a page by adding each of them in a new line of
@@ -76,19 +76,19 @@ An atom/rss feed is generated for each tag and made autodiscoverable.</p>
 </ul>
 <h2>Tutorial</h2>
 <p>Download the latest version of this file in an empty directory and run it:</p>
-<pre><code> wget https://github.com/n-peugnet/makesite/raw/master/Makefile
- make
+<pre><code>wget https://github.com/n-peugnet/makesite/raw/master/Makefile
+make
 </code></pre>
 <p>This will create the base directory structure detailled above and the first
 page of your website: <code>index.html</code> in the <code>public</code> directory. To browse the
 website you will have to make it accessible with a webserver. For this, you
 can use the test server (requires busybox, ctrl+c to stop):</p>
-<pre><code> make test
+<pre><code>make test
 </code></pre>
 <p>To add content to the home page you can add a <code>.html</code> file in the <code>pages</code>
 folder then run makesite once again, but this time in watch mode (requires
 fswatch, ctrl+c to stop):</p>
-<pre><code> make watch
+<pre><code>make watch
 </code></pre>
 <p>This mode will automatically rebuild the site on file changes. It is possible
 to run both of these commands at once using <code>make run</code>.</p>
@@ -98,8 +98,8 @@ every pages to make your website fully navigable.
 For this feature to work properly you will have to set the <code>basepath</code> variable
 accordingly.</p>
 <p>If you deleted some files from the <code>pages</code> directory, then its better to run:</p>
-<pre><code> make clean
- make
+<pre><code>make clean
+make
 </code></pre>
 <p>This will ensure that the deleted content is removed from your website.</p>
 <h2>Customization</h2>
@@ -133,5 +133,5 @@ interpreted as a variable in Makesite.</li>
 </ul>
 <p>The set of targets under <code>dev/</code> are there to help developers. The <code>init</code> one
 will create a basic dev environment.</p>
-<pre><code> make dev/init
+<pre><code>make dev/init
 </code></pre>
