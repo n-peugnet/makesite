@@ -15,7 +15,7 @@
 # See <https://www.gnu.org/licenses/gpl-3.0.txt> for the full text of the
 # GNU General Public License version 3.0.
 
-## run `make docs` to see the rendered version. (requires cmark)
+## run `make docs` to see the rendered version. (requires discount)
 ##
 # Makesite documentation
 # ==============================================================================
@@ -94,12 +94,15 @@
 # Dependencies
 # ------------
 # Makesite requires the following programs to be in the PATH:
+#
 # - [make](https://www.gnu.org/software/make/) (obviously)
 # - [coreutils](https://www.gnu.org/software/coreutils/)
 # - [sed](https://www.gnu.org/software/sed/)
 
 # These programs are optional dependencies for some features to work properly:
-# - [cmark](https://github.com/commonmark/cmark) for markdown render and docs.
+#
+# - [discount](https://www.pell.portland.or.us/~orc/Code/discount/) for markdown
+#   render and docs.
 # - [busybox](https://busybox.net/) for test server.
 # - [fswatch](https://emcrisostomo.github.io/fswatch/) for files watcher.
 # - [rsync](https://rsync.samba.org/) as the default deploy command
@@ -160,6 +163,7 @@
 # -----------
 # A static-site-generator based on a Makefile is not really the sanest idea.
 # This is why Makesite has some serious limitations. Here is the full list:
+#
 # - The ` ` character is not allowed in any file or folder name (and the use
 #   of any special character is strongly discouraged). Instead you can use the
 #   character `_` which will be converted to space in the default title.
@@ -170,6 +174,7 @@
 # Developement
 # ==============================================================================
 # Code style:
+#
 # - Tab is 8 spaces.
 # - Max width is 80 columns.
 # - Configurable variables are [a-z] other variables are SCREAMING_SNAKE_CASE.
@@ -217,7 +222,7 @@ export deploydest     ?= none
 endif
 export deployflags    ?= -rltzh --delete --copy-unsafe-links
 export deploycmd      ?= rsync $(deployflags) public$(basepath) $(deploydest)
-
+export markdownc      ?= markdown -f toc,urlencodedanchor,idanchor
 
 export l0:=$(if $(filter trace,$(loglevel)),,@)            # trace
 export l1:=$(if $(filter trace debug,$(loglevel)),,@)      # debug
@@ -357,7 +362,7 @@ endif
 	$$(l1)#GEN build/$</$$@
 
 %.md.html: $$(PAGE_DIR)/%.md
-	$$(l0)cmark $$< > $$@
+	$$(l0)$$(markdownc) $$< > $$@
 	$$(l1)#MDC build/$</$$@
 
 pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
@@ -818,7 +823,7 @@ docs: build/docs.html
 	$(l0)open $<
 
 build/docs.html: Makefile | build
-	$(l0)sed -En '/^##$$/,/^##$$/s/^#*\s?//p' Makefile | cmark > $@
+	$(l0)sed -En '/^##$$/,/^##$$/s/^#*\s?//p' Makefile | $(markdownc) > $@
 	$(l2)#GEN $@
 
 .PHONY: dev/init
