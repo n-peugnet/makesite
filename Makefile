@@ -119,7 +119,7 @@
 # website you will have to make it accessible with a webserver. For this, you
 # can use the test server (requires busybox, ctrl+c to stop):
 #
-#     make test
+#     make serve
 
 # To add content to the home page you can add a `.html` file in the `pages`
 # folder then run makesite once again, but this time in watch mode (requires
@@ -789,7 +789,7 @@ siteclean:
 
 .PHONY: run
 run:
-	$(l0)$(MAKE) test watch -j2
+	$(l0)$(MAKE) serve watch -j2
 
 .PHONY: watch
 watch:
@@ -805,8 +805,8 @@ else
 	done
 endif
 
-.PHONY: test
-test: public
+.PHONY: serve
+serve: public
 ifeq (, $(shell which busybox))
 	#ERR could not find busybox
 else
