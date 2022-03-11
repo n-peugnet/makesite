@@ -530,10 +530,18 @@ endef
 #################################### Utils #####################################
 
 define UTILS
+# Make function to escape char for sed
 define esc
 $$(strip $$(subst $$$$,\x24,$$(subst ~,\x7e,$$(subst ",\x22,$$(subst ',\x27,\
    $$1)))))
 endef
+# Make function to print current variables
+define printvars
+$$(foreach V,$$(sort $$(filter-out printvars $(NO_PRINT),$$(.VARIABLES))),
+	   $$(if $$(filter-out environment% default automatic,$$(origin $$V)),\
+	   $$(info \033[31m$$V\033[0m=$$($$V))))
+endef
+# Shell function to convert names into slugs
 define slugify
 sort $$1 | iconv -c -t ascii//TRANSLIT | sed -E 's/[~^]+//g' | sed -E \
 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$$$$//g' | tr A-Z a-z | uniq
@@ -586,6 +594,9 @@ sed $$(ROOT)/build/templates/layout/feed.atom \
 > $$3
 endef
 endef
+
+NO_PRINT = UTILS ATOMENTRY_VIEW ATOM_LAYOUT TAG_VIEW FULL_VIEW PAGE_LAYOUT \
+	   SUB_MAKEFILE
 
 ################################ Main Makefile #################################
 
@@ -863,6 +874,10 @@ dev/update-docs: docs.html
 	git commit -m "docs for $(HEAD)"
 	git push
 	git checkout $(REF)
+
+.PHONY: dev/print-vars
+dev/print-vars:
+	$(l0)$(call printvars)
 
 .vscode/settings.json:
 	mkdir -p $(@D)
