@@ -322,8 +322,7 @@ ifeq ($$(strip $$(l1)),@)
 endif
 
 index.html: head.html breadcrumbs.html tags.html content.html pages.html \
-	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) \
-	    $$(PAGE_DIR)/$$(cover)
+	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) cover
 	$$(l0)sed $$(LAYOUT_FILE) \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
