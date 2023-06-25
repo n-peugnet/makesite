@@ -83,6 +83,7 @@
 #     dateformat = %d/%m/%y
 #     imagesext = png|gif
 #     markdownc = cmark
+#     loglevel = debug
 
 # Tags
 # ----
@@ -139,11 +140,16 @@
 # accordingly.
 
 # If you deleted some files from the `pages` directory, they will not be used
-# anymore but the will still be present in `public`. If you want to fully
-# delete them, then its better to run:
+# anymore but they will still be present in `public`. If you want to fully
+# delete them, then it is better to run:
 #
 #     make siteclean
 #     make
+
+# **Tip**: If your computer has multiple cores, you can use `-j` option of Make
+# to speed up the build, for instance:
+#
+#     make -j4
 
 # Customization
 # -------------
