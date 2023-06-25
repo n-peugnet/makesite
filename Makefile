@@ -291,6 +291,7 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 PREV_ASSETS   := $$(strip $$(shell cat assets 2> /dev/null))
+PREV_COVER    := $$(strip $$(shell cat cover 2> /dev/null))
 PREV_CONTENT  := $$(strip $$(shell cat content 2> /dev/null))
 PREV_SUBPAGES := $$(strip $$(shell cat subpages 2> /dev/null))
 
@@ -400,7 +401,7 @@ endif
 $$(SUBMETADATA): head.html breadcrumbs.html metadata .FORCE
 	$$(l0)$$(MAKE) -C $$(@D)
 
-metadata: $$(CONFIG_FILE)
+metadata: $$(CONFIG_FILE) cover
 	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t\t$\
 		    $$(COVER)' > $$@
 	$$(l1)#GEN build/$</$$@
@@ -411,6 +412,13 @@ else
 assets:
 endif
 	$$(l0)echo '$$(ASSETS)' > $$@
+
+ifneq ($$(PREV_COVER),$$(strip $$(COVER)))
+cover: .FORCE
+else
+cover:
+endif
+	$$(l0)echo '$$(COVER)' > $$@
 
 ifneq ($$(PREV_CONTENT),$$(strip $$(CONTENT)))
 content: .FORCE
