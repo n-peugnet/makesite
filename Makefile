@@ -41,14 +41,15 @@
 #         └── view                # View files
 
 # In the `pages` directory, *every folder is a page*. Thus a *page's URL is its
-# path*. The content of a page is rendered from every `.md` and `.html` and
+# path*. The content of a page is rendered from every `*.md`, `*.html`, and
 # image files it contains, to which a list of the subpages is appended.
+# Each `*.js`, `*.css` files and the `favicon.*` it contains are automatically
+# added to the current page and all of its children.
 
-# There is only one exception to this principle: each page can have a special
-# `assets` folder. Every `*.js`, `*.css` files and the `favicon.*` it contains
-# are automatically added to the associated page and all of its children.
-# This folder can also be used to store images that wont be automatically
-# included in the content.
+# There is one exception to this principle: each page can have an `assets`
+# folder that is ignored. This folder can be used to store images or scripts
+# that wont be automatically included in the content so that they can manually
+# be included as needed.
 
 # Configuration
 # -------------
@@ -254,7 +255,7 @@ keywords    ?=
 description ?=
 sort        ?= title/asc
 feed        ?=
-cover       ?= $$(wildcard $$(PAGE_DIR)/assets/cover.*)
+cover       ?= $$(wildcard $$(PAGE_DIR)/cover.*)
 
 # sanitize values
 date        :=$$(shell date -d '$$(date)' +%s)
@@ -282,15 +283,16 @@ PAGE_MD     := $$(wildcard $$(PAGE_DIR)/*.md)
 RENDERED_MD := $$(patsubst $$(PAGE_DIR)/%.md,%.md.html,$$(PAGE_MD))
 ALL_HTML    := $$(PAGE_HTML) $$(RENDERED_MD)
 
-JS      := $$(wildcard $$(PAGE_DIR)/assets/*.js)
-CSS     := $$(wildcard $$(PAGE_DIR)/assets/*.css)
-ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/assets/favicon.*))
+JS      := $$(wildcard $$(PAGE_DIR)/*.js)
+CSS     := $$(wildcard $$(PAGE_DIR)/*.css)
+ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/favicon.*))
 ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 PREV_ASSETS := $$(strip $$(shell cat assets 2> /dev/null))
 
-IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
+IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 \
+		| grep -P '(?<!cover|favicon)\.($(imagesext))$$$$')
 COVER = $$(if $$(cover),$$(call esc,<img class="cover" alt="[cover picture]" \
 	src="$$(PAGE_PATH)$$(cover)" />),)
 
@@ -315,7 +317,8 @@ ifeq ($$(strip $$(l1)),@)
 endif
 
 index.html: head.html breadcrumbs.html tags.html content.html pages.html \
-	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) $(ASSETS_SRC)
+	    $$(LAYOUT_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) \
+	    $$(PAGE_DIR)/$$(cover)
 	$$(l0)sed $$(LAYOUT_FILE) \
 	-e 's~{{sitename}}~$$(sitename)~' \
 	-e 's~{{title}}~$$(title)~' \
@@ -616,7 +619,6 @@ ifneq (,$(wildcard pages))
 PAGE_LIST      := $(shell find pages -mindepth 1 -type d \! -name assets)
 PAGE_TAGS_LIST := $(shell find pages -mindepth 1 -type f -name tags)
 PAGE_CONF_LIST := $(shell find pages -mindepth 1 -type f -name config)
-ASSETS_DIR     := $(shell find pages -mindepth 1 -type d -name assets)
 IMG            := $(shell find pages | grep -E '($(imagesext))$$')
 PAGE_FEED_LIST := $(shell grep -rlE 'feed ?= ?1' pages --include config)
 endif
@@ -629,8 +631,8 @@ PUBD           := public$(basepath)
 PUBLIC_PAGES   := $(patsubst pages/%,$(PUBD)%,$(PAGE_LIST))
 PUBLIC_INDEXES := $(patsubst %,%/index.html,$(PUBLIC_PAGES)) $(PUBD)index.html
 
-JS     := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.js))
-CSS    := $(foreach d,$(ASSETS_DIR),$(wildcard $(d)/*.css))
+JS     := $(foreach d,pages $(PAGE_LIST),$(wildcard $(d)/*.js))
+CSS    := $(foreach d,pages $(PAGE_LIST),$(wildcard $(d)/*.css))
 PUBLIC_JS  := $(JS:pages/%=$(PUBD)%)
 PUBLIC_CSS := $(CSS:pages/%=$(PUBD)%)
 PUBLIC_IMG := $(IMG:pages/%=$(PUBD)%)
