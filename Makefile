@@ -291,6 +291,7 @@ ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 PREV_ASSETS := $$(strip $$(shell cat assets 2> /dev/null))
 PREV_CONTENT := $$(strip $$(shell cat content 2> /dev/null))
+PREV_SUBPAGES := $$(strip $$(shell cat subpages 2> /dev/null))
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 \
 		| grep -P '(?<!cover|favicon)\.($(imagesext))$$$$')
@@ -373,7 +374,8 @@ endif
 	$$(l0)$$(markdownc) $$< > $$@
 	$$(l1)#MDC build/$</$$@
 
-pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG)
+pages.html: $$(SUBMETADATA) $$(VIEW_FILE) $$(CONFIG_FILE) $$(ROOT_CONFIG) \
+	    subpages
 	$$(l0)echo '<ul>' > $$@
 ifneq ($$(strip $$(SUBMETADATA)),)
 	$$(l0)$$(call pages,$$(SUBMETADATA),$$(VIEW_FILE),$$@,$$(dateformat), \
@@ -415,6 +417,13 @@ else
 content:
 endif
 	$$(l0)echo $$(CONTENT) > $$@
+
+ifneq ($$(PREV_SUBPAGES),$$(strip $$(SUBPAGES)))
+subpages: .FORCE
+else
+subpages:
+endif
+	$$(l0)echo $$(SUBPAGES) > $$@
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
