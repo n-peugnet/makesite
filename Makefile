@@ -478,6 +478,7 @@ define PAGE_LAYOUT
 		.tag {list-style-type: none; display: inline-block; margin:2px;\
 padding: 2px 6px; background-color: grey; border-radius: 15px;}
 		.tag a {color: white; text-decoration: none;}
+		h1 {border-bottom: solid 1px grey;}
 		code {padding: 2px 4px; background: lightgrey; border-radius: 4px;}
 		pre code {display: block; padding: 4px 8px;}
 		</style>
