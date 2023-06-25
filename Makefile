@@ -290,11 +290,13 @@ ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
 PREV_ASSETS := $$(strip $$(shell cat assets 2> /dev/null))
+PREV_CONTENT := $$(strip $$(shell cat content 2> /dev/null))
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 \
 		| grep -P '(?<!cover|favicon)\.($(imagesext))$$$$')
 COVER = $$(if $$(cover),$$(call esc,<img class="cover" alt="[cover picture]" \
 	src="$$(PAGE_PATH)$$(cover)" />),)
+CONTENT := $$(ALL_HTML) $$(IMG)
 
 ifeq ($$(strip $$(feed)),1)
 OTHER += feed.atom
@@ -356,7 +358,7 @@ endif
 	$$(l1)#GEN build/$</$$@
 
 content.html: I=$$(IMG:$$(PAGESDIR)/%=<img src="$$(basepath)%" alt="[auto]"/>)
-content.html: $$(ALL_HTML) $$(IMG)
+content.html: $$(CONTENT) content
 	$$(l0)echo '$$I' > $$@
 ifneq ($$(strip $$(ALL_HTML)),)
 	$$(l0)cat $$(ALL_HTML) \
@@ -406,6 +408,13 @@ else
 assets:
 endif
 	$$(l0)echo $$(ASSETS) > $$@
+
+ifneq ($$(PREV_CONTENT),$$(strip $$(CONTENT)))
+content: .FORCE
+else
+content:
+endif
+	$$(l0)echo $$(CONTENT) > $$@
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
