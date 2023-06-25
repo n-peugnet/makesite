@@ -272,7 +272,7 @@ PAGE_PATH_e  = $$(call esc,$$(PAGE_PATH))
 PARENT      := $(patsubst pages%$(notdir $*),%,$<)
 SUBPAGES    := $$(shell find $$(PAGE_DIR) -maxdepth 1 -mindepth 1 -type d \
 			     \! -name assets)
-SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadatas)
+SUBMETADATA := $$(SUBPAGES:$$(PAGE_DIR)/%=%/metadata)
 SORT_FIELD  := $$(subst /,,$$(dir $$(sort)))
 SORT_ORDER  := $$(notdir $$(sort))
 TPL_DIR     := $$(ROOT)/build/templates
@@ -315,7 +315,7 @@ endif
 
 # Default target.
 .PHONY: build/$<
-build/$<: index.html metadatas tagspage $$(OTHER)
+build/$<: index.html metadata tagspage $$(OTHER)
 ifeq ($$(strip $$(l1)),@)
 	@:
 endif
@@ -351,11 +351,11 @@ ifeq ($$(strip $$(feed)),1)
 endif
 	$$(l1)#GEN build/$</$$@
 
-breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadatas)
+breadcrumbs.html: ../breadcrumbs.html $$(wildcard ../metadata)
 	$$(l0)cp $$< $$@
 ifneq ($$(strip $$(PARENT)),)
 	$$(l0)printf '<a href="$$(subst //,/,$$(basepath)$$(PARENT))"\
-		     >$$(shell cut -f1 ../metadatas)</a> $$(separator) ' >> $$@
+		     >$$(shell cut -f1 ../metadata)</a> $$(separator) ' >> $$@
 endif
 	$$(l1)#GEN build/$</$$@
 
@@ -397,10 +397,10 @@ pages.atom: $$(TPL_DIR)/view/entry.atom $$(SUBMETADATA) \
 	$$(l1)#GEN $@
 endif
 
-$$(SUBMETADATA): head.html breadcrumbs.html metadatas .FORCE
+$$(SUBMETADATA): head.html breadcrumbs.html metadata .FORCE
 	$$(l0)$$(MAKE) -C $$(@D)
 
-metadatas: $$(CONFIG_FILE)
+metadata: $$(CONFIG_FILE)
 	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t\t$\
 		    $$(COVER)' > $$@
 	$$(l1)#GEN build/$</$$@
@@ -582,7 +582,7 @@ sort $$1 | iconv -c -t ascii//TRANSLIT | sed -E 's/[~^]+//g' | sed -E \
 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$$$$//g' | tr A-Z a-z | uniq
 endef
 # render a list of pages based on:
-# 1. metadatas file
+# 1. metadata file
 # 2. view file
 # 3. destination file
 # 4. date format
@@ -675,7 +675,7 @@ R_VARS_EXP = $(patsubst %,-e 's/\({{%}}\)/\n\1\n/',$(R_VARS))
 
 ifneq ($(strip $(PAGE_TAGS_LIST)),)
 TAGS := $(shell $(call slugify,$(PAGE_TAGS_LIST)))
-TAGS_META    := $(TAGS:%=build/tags/%/metadatas)
+TAGS_META    := $(TAGS:%=build/tags/%/metadata)
 TAGS_INDEXES := $(TAGS:%=$(PUBD)tags/%/index.html)
 TAGS_FEEDS   := $(TAGS:%=$(PUBD)tags/%/feed.atom)
 endif
@@ -703,10 +703,10 @@ $(PUBLIC_INDEXES) $(PAGE_FEEDS): $(PUBD)%: build/pages/%
 $(TAGS_INDEXES): $(PUBD)tags/%/index.html: build/tags/%/pages.html \
 					   build/tags/%/head.html \
 					   build/pages/head.html \
-					   build/pages/metadatas \
+					   build/pages/metadata \
 					   $(TAGS_LAYOUT)
 	$(l0)mkdir -p $(@D)
-	$(l0)root=`cut build/pages/metadatas -f1`; \
+	$(l0)root=`cut build/pages/metadata -f1`; \
 	sed $(TAGS_LAYOUT) \
 	-e 's~{{sitename}}~$(sitename)~' \
 	-e 's~{{title}}~Tag: $*~' \
@@ -746,10 +746,10 @@ build/pages/%/Makefile: pages/% Makefile
 	$(l0)echo "$$CONTENT" > $@
 	$(l1)#GEN $@
 
-build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadatas
+build/tags/%/pages.html: $(TAGS_VIEW) build/tags/%/metadata
 	$(l0)mkdir -p $(@D)
 	$(l0)echo '<ul>' > $@
-	$(l0)$(call pages,build/tags/$*/metadatas,$<,$@,$(dateformat),-nrk2)
+	$(l0)$(call pages,build/tags/$*/metadata,$<,$@,$(dateformat),-nrk2)
 	$(l0)echo '</ul>' >> $@
 	$(l1)#GEN $@
 
@@ -765,13 +765,13 @@ $(TAGS_META): build/tags ;
 build/tags: $(BUILD_TAGS_LIST) | build/pages
 ifneq ($(strip $(BUILD_TAGS_LIST)),)
 	$(l0)mkdir -p $@
-	$(l0)cat $(BUILD_TAGS_LIST) > $@/metadatas
-	$(l0)for t in `cut -f1 $@/metadatas | sort | uniq`; do \
+	$(l0)cat $(BUILD_TAGS_LIST) > $@/metadata
+	$(l0)for t in `cut -f1 $@/metadata | sort | uniq`; do \
 		mkdir -p $@/$$t; \
-		sed -n "s~^$$t\t\(.*\)~\1~p" $@/metadatas \
-		> $@/$$t/metadatas.new; \
-		cmp --silent $@/$$t/metadatas $@/$$t/metadatas.new \
-		|| cp $@/$$t/metadatas.new $@/$$t/metadatas; \
+		sed -n "s~^$$t\t\(.*\)~\1~p" $@/metadata \
+		> $@/$$t/metadata.new; \
+		cmp --silent $@/$$t/metadata $@/$$t/metadata.new \
+		|| cp $@/$$t/metadata.new $@/$$t/metadata; \
 	done
 endif
 
@@ -782,10 +782,10 @@ build/tags/%/feed.atom: build/tags/%/pages.atom build/templates/layout/feed.atom
 	$(l1)#GEN $@
 
 .PRECIOUS: build/tags/%/pages.atom
-build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadatas\
+build/tags/%/pages.atom: build/templates/view/entry.atom build/tags/%/metadata\
 			 config
 	$(l0)echo > $@
-	$(l0)$(call pages,build/tags/$*/metadatas,$<,$@,%FT%T%:z,-nrk2)
+	$(l0)$(call pages,build/tags/$*/metadata,$<,$@,%FT%T%:z,-nrk2)
 	$(l1)#GEN $@
 
 # sanitize templates to avoid problems later: 
