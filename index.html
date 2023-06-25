@@ -78,14 +78,15 @@ respective folders.</p>
 </code></pre>
 
 <p>In the <code>pages</code> directory, <em>every folder is a page</em>. Thus a <em>page&rsquo;s URL is its
-path</em>. The content of a page is rendered from every <code>.md</code> and <code>.html</code> and
-image files it contains, to which a list of the subpages is appended.</p>
+path</em>. The content of a page is rendered from every <code>*.md</code>, <code>*.html</code>, and
+image files it contains, to which a list of the subpages is appended.
+Each <code>*.js</code>, <code>*.css</code> files and the <code>favicon.*</code> it contains are automatically
+added to the current page and all of its children.</p>
 
-<p>There is only one exception to this principle: each page can have a special
-<code>assets</code> folder. Every <code>*.js</code>, <code>*.css</code> files and the <code>favicon.*</code> it contains
-are automatically added to the associated page and all of its children.
-This folder can also be used to store images that wont be automatically
-included in the content.</p>
+<p>There is one exception to this principle: each page can have an <code>assets</code>
+folder that is ignored. This folder can be used to store images or scripts
+that wont be automatically included in the content so that they can manually
+be included as needed.</p>
 
 <h2 id="Configuration">Configuration</h2>
 
