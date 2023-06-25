@@ -66,7 +66,7 @@
 #     description = Home page of the Makesite's website
 #     sort        = date/desc                           # title/asc
 #     feed        = 1
-#     cover       = assets/image.jpg                    # assets/cover.*
+#     cover       = assets/image.jpg                    # cover.*
 
 # There is a "root `config` file" at the same level as this file that contains
 # the website's global configuration. Here are the variables that can be set
@@ -152,8 +152,8 @@
 # specific pages or all of them using the `layout` and `view` variables of the
 # according `config` file.
 
-# Styles can also be easily defined for one or a set of pages by adding `.css`
-# files in the `assets` folders.
+# Styles can also be easily defined for one or a set of pages by adding `*.css`
+# files in the `pages` folders.
 
 # Deployment
 # ----------
