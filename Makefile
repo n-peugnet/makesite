@@ -402,8 +402,10 @@ metadatas: $$(CONFIG_FILE)
 
 ifneq ($$(PREV_ASSETS),$$(strip $$(ASSETS)))
 assets: .FORCE
-	$$(l0)echo $$(ASSETS) > $$@
+else
+assets:
 endif
+	$$(l0)echo $$(ASSETS) > $$@
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
