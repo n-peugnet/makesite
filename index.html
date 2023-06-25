@@ -122,6 +122,7 @@ view = title
 dateformat = %d/%m/%y
 imagesext = png|gif
 markdownc = cmark
+loglevel = debug
 </code></pre>
 
 <h2 id="Tags">Tags</h2>
@@ -188,11 +189,17 @@ For this feature to work properly you will have to set the <code>basepath</code>
 accordingly.</p>
 
 <p>If you deleted some files from the <code>pages</code> directory, they will not be used
-anymore but the will still be present in <code>public</code>. If you want to fully
-delete them, then its better to run:</p>
+anymore but they will still be present in <code>public</code>. If you want to fully
+delete them, then it is better to run:</p>
 
 <pre><code>make siteclean
 make
+</code></pre>
+
+<p><strong>Tip</strong>: If your computer has multiple cores, you can use <code>-j</code> option of Make
+to speed up the build, for instance:</p>
+
+<pre><code>make -j4
 </code></pre>
 
 <h2 id="Customization">Customization</h2>
