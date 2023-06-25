@@ -82,6 +82,7 @@
 #     view = title
 #     dateformat = %d/%m/%y
 #     imagesext = png|gif
+#     markdownc = cmark
 
 # Tags
 # ----
@@ -137,12 +138,12 @@
 # For this feature to work properly you will have to set the `basepath` variable
 # accordingly.
 
-# If you deleted some files from the `pages` directory, then its better to run:
+# If you deleted some files from the `pages` directory, they will not be used
+# anymore but the will still be present in `public`. If you want to fully
+# delete them, then its better to run:
 #
-#     make clean
+#     make siteclean
 #     make
-#
-# This will ensure that the deleted content is removed from your website.
 
 # Customization
 # -------------
