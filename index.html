@@ -16,6 +16,8 @@
 		.tags ul {padding: 0;}
 		.tag {list-style-type: none; display: inline-block; margin:2px; padding: 2px 6px; background-color: grey; border-radius: 15px;}
 		.tag a {color: white; text-decoration: none;}
+		code {padding: 2px 4px; background: lightgrey; border-radius: 4px;}
+		pre code {display: block; padding: 4px 8px;}
 		</style>
 	</head>
 	<body>
@@ -25,7 +27,7 @@
 			</p>
 			
 			<h1>Makesite</h1>
-			<p class="date">2021-08-13</p>
+			<p class="date">2023-06-25</p>
 			<div class="tags">
 				
 
@@ -163,7 +165,7 @@ page of your website: <code>index.html</code> in the <code>public</code> directo
 website you will have to make it accessible with a webserver. For this, you
 can use the test server (requires busybox, ctrl+c to stop):</p>
 
-<pre><code>make test
+<pre><code>make serve
 </code></pre>
 
 <p>To add content to the home page you can add a <code>.html</code> file in the <code>pages</code>
@@ -212,9 +214,10 @@ If rsync is not enough, you can define a custom command in <code>deploycmd</code
 This is why Makesite has some serious limitations. Here is the full list:</p>
 
 <ul>
-<li>The <code></code> character is not allowed in any file or folder name (and the use
-of any special character is strongly discouraged). Instead you can use the
-character <code>_</code> which will be converted to space in the default title.</li>
+<li>The <code>&nbsp;</code> character is not allowed in any file or folder name
+(and the use of any special character is strongly discouraged). Instead you
+can use the character <code>_</code> which will be converted to space in the default
+title.</li>
 <li>The <code>$</code> character must be written <code>$$</code> in <code>config</code> files not to be
 interpreted as a variable in Makesite.</li>
 <li>Relative path in content (images,links,&hellip;) must start with <code>./</code> or <code>../</code>.</li>
