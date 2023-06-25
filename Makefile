@@ -164,9 +164,10 @@
 # A static-site-generator based on a Makefile is not really the sanest idea.
 # This is why Makesite has some serious limitations. Here is the full list:
 #
-# - The ` ` character is not allowed in any file or folder name (and the use
-#   of any special character is strongly discouraged). Instead you can use the
-#   character `_` which will be converted to space in the default title.
+# - The <code>&nbsp;</code> character is not allowed in any file or folder name
+#   (and the use of any special character is strongly discouraged). Instead you
+#   can use the character `_` which will be converted to space in the default
+#   title.
 # - The `$` character must be written `$$` in `config` files not to be
 #   interpreted as a variable in Makesite.
 # - Relative path in content (images,links,...) must start with `./` or `../`.
@@ -446,6 +447,8 @@ define PAGE_LAYOUT
 		.tag {list-style-type: none; display: inline-block; margin:2px;\
 padding: 2px 6px; background-color: grey; border-radius: 15px;}
 		.tag a {color: white; text-decoration: none;}
+		code {padding: 2px 4px; background: lightgrey; border-radius: 4px;}
+		pre code {display: block; padding: 4px 8px;}
 		</style>
 	</head>
 	<body>
