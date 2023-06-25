@@ -288,6 +288,8 @@ ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/assets/favicon.*))
 ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
+PREV_ASSETS := $$(strip $$(shell cat assets 2> /dev/null))
+
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 | grep -E '($(imagesext))$$$$')
 COVER = $$(if $$(cover),$$(call esc,<img class="cover" alt="[cover picture]" \
 	src="$$(PAGE_PATH)$$(cover)" />),)
@@ -333,7 +335,7 @@ head.html: J=$$(JS:$$(PAGESDIR)/%=<script src="$$(basepath)%" async></script>)
 head.html: C=$$(CSS:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="stylesheet">)
 head.html: I=$$(ICO:$$(PAGESDIR)/%=<link href="$$(basepath)%" rel="icon" \
 				    type="image/$$(ICO_EXT)">)
-head.html: ../head.html $$(CONFIG_FILE) | $$(ASSETS)
+head.html: ../head.html $$(CONFIG_FILE) assets | $$(ASSETS)
 	$$(l0)cp $$< $$@
 	$$(l0)echo '$$(J) $$(C) $$(I)' >> $$@
 ifeq ($$(strip $$(feed)),1)
@@ -394,6 +396,11 @@ metadatas: $$(CONFIG_FILE)
 	$$(l0)echo '$$(title)\t$$(date)\t$$(description)\t$$(PAGE)\t\t$\
 		    $$(COVER)' > $$@
 	$$(l1)#GEN build/$</$$@
+
+ifneq ($$(PREV_ASSETS),$$(strip $$(ASSETS)))
+assets: .FORCE
+	$$(l0)echo $$(ASSETS) > $$@
+endif
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
