@@ -290,8 +290,8 @@ ICO     := $$(firstword $$(wildcard $$(PAGE_DIR)/favicon.*))
 ICO_EXT := $$(subst .,,$$(suffix $$(ICO)))
 ASSETS  := $$(JS) $$(CSS) $$(ICO)
 
-PREV_ASSETS := $$(strip $$(shell cat assets 2> /dev/null))
-PREV_CONTENT := $$(strip $$(shell cat content 2> /dev/null))
+PREV_ASSETS   := $$(strip $$(shell cat assets 2> /dev/null))
+PREV_CONTENT  := $$(strip $$(shell cat content 2> /dev/null))
 PREV_SUBPAGES := $$(strip $$(shell cat subpages 2> /dev/null))
 
 IMG := $$(shell find $$(PAGE_DIR) -maxdepth 1 \
@@ -410,21 +410,21 @@ assets: .FORCE
 else
 assets:
 endif
-	$$(l0)echo $$(ASSETS) > $$@
+	$$(l0)echo '$$(ASSETS)' > $$@
 
 ifneq ($$(PREV_CONTENT),$$(strip $$(CONTENT)))
 content: .FORCE
 else
 content:
 endif
-	$$(l0)echo $$(CONTENT) > $$@
+	$$(l0)echo '$$(CONTENT)' > $$@
 
 ifneq ($$(PREV_SUBPAGES),$$(strip $$(SUBPAGES)))
 subpages: .FORCE
 else
 subpages:
 endif
-	$$(l0)echo $$(SUBPAGES) > $$@
+	$$(l0)echo '$$(SUBPAGES)' > $$@
 
 tagspage: tags breadcrumbs.html content.html $$(CONFIG_FILE)
 # The last column is only there to generate a diff in build/tags
